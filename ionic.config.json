@@ -1,0 +1,7 @@
+{
+  "name": "avestruz",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
