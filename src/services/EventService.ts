@@ -19,7 +19,7 @@ class EventService {
     const sub = poolTextNote.sub(relays, [
       {
         kinds: [1], // 0 metadata, 1 text note
-        limit: 300,
+        limit: import.meta.env.VITE_SUB_LIMIT,
         // '#t': ['nostr'], //tags
         // authors: [
         //   '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack as na example
