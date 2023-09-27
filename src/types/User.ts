@@ -6,5 +6,4 @@ export interface User {
   about: string;
   name: string;
   pubkey: string;
-  notFound: boolean;
 }
