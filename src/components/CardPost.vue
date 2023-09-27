@@ -2,9 +2,13 @@
   <div class="post-wrap">
     <div class="post-header">
       <img
-        :src="picture"
+        :src="
+          (picture as string) ?? // found on metadata
+          (pictureNotFound() as unknown as string) // Not found on metadata
+        "
         alt=""
         class="avator"
+        onerror="this.src='oistrich-64.png'"
       />
 
       <div class="post-header-info">
@@ -69,13 +73,18 @@ import {
 } from 'ionicons/icons';
 import ContentMedia from '@/components/ContentMedia.vue';
 import { truncate } from '@/composables/truncate';
+
 defineProps<{
   displayName: string;
-  picture: string;
+  picture?: string;
   moment: string;
   content: string;
   hashtags: string[];
 }>();
+
+const pictureNotFound = () => {
+  return import.meta.env.VITE_DEFAULT_IMAGE + Math.random();
+};
 </script>
 
 <style scoped>

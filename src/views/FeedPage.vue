@@ -15,8 +15,8 @@
         v-for="textNoteUser of textNotesUsers"
         :key="textNoteUser.textNote.id"
         :displayName="
-          textNoteUser.user?.notFound
-            ? textNoteUser.user?.pubkey
+          JSON.stringify(textNoteUser.user) === '{}'
+            ? textNoteUser.textNote?.pubkey // user not found in relay
             : textNoteUser.user?.display_name ??
               textNoteUser.user?.name ??
               'Anon'
@@ -46,16 +46,18 @@ import {
   IonTitle,
   IonContent,
 } from '@ionic/vue';
+import { onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useEventStore } from '@/stores/eventStore';
 import { fromUnixTime, formatDistance } from 'date-fns';
 import EventService from '@/services/EventService';
-import { TextNoteUser } from '@/types/TextNoteUser';
-import { onMounted, ref } from 'vue';
 import CardPost from '@/components/CardPost.vue';
 
-const textNotesUsers = ref<TextNoteUser[]>([]);
+const eventStore = useEventStore();
+const { textNotesUsers } = storeToRefs(eventStore);
 
 onMounted(async () => {
-  textNotesUsers.value = await EventService.getEvents();
+  await EventService.getEvents();
 });
 </script>
 

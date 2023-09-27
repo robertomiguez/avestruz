@@ -23,6 +23,8 @@
     "date-fns": "^2.30.0",
     "ionicons": "^7.0.0",
     "nostr-tools": "^1.14.2",
+    "pinia": "^2.1.6",
+    "pinia-plugin-persistedstate": "^3.2.0",
     "vue": "^3.2.45",
     "vue-router": "^4.1.6"
   },
