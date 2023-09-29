@@ -4,7 +4,13 @@ import { RouteRecordRaw } from 'vue-router';
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
+    name: 'FeedPage',
     component: () => import('@/views/FeedPage.vue'),
+  },
+  {
+    path: '/login',
+    name: 'LoginPage',
+    component: () => import('@/views/LoginPage.vue'),
   },
 ];
 

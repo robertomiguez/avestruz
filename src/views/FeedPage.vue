@@ -2,7 +2,8 @@
   <ion-page>
     <ion-header>
       <ion-toolbar>
-        <ion-title>Avestruz</ion-title>
+        <ion-title slot="start">Avestruz</ion-title>
+        <button-login slot="end" />
       </ion-toolbar>
     </ion-header>
     <ion-content :fullscreen="true">
@@ -51,6 +52,7 @@ import { storeToRefs } from 'pinia';
 import { useEventStore } from '@/stores/eventStore';
 import { fromUnixTime, formatDistance } from 'date-fns';
 import EventService from '@/services/EventService';
+import ButtonLogin from '@/components/ButtonLogin.vue';
 import CardPost from '@/components/CardPost.vue';
 
 const eventStore = useEventStore();
