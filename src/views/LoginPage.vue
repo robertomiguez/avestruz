@@ -94,7 +94,7 @@ const login = () => {
     back();
   } catch (error) {
     privateKeyNsec.value = undefined;
-    console.log('invalid private key (nsec)');
+    console.error('invalid private key (nsec)');
   }
 };
 

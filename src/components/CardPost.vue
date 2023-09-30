@@ -1,16 +1,10 @@
 <template>
   <div class="post-wrap">
     <div class="post-header">
-      <img
-        :src="
-          (picture as string) ?? // found on metadata
-          (pictureNotFound() as unknown as string) // Not found on metadata
-        "
-        alt=""
-        class="avator"
-        onerror="this.src='oistrich-64.png'"
+      <image-user
+        :pubkey="pubkey"
+        :picture="picture"
       />
-
       <div class="post-header-info">
         <span class="tooltip"
           >{{ truncate(displayName, 15) }}
@@ -73,37 +67,25 @@ import {
 } from 'ionicons/icons';
 import ContentMedia from '@/components/ContentMedia.vue';
 import { truncate } from '@/composables/truncate';
+import ImageUser from '@/components/ImageUser.vue';
 
 defineProps<{
+  pubkey: string;
   displayName: string;
   picture?: string;
   moment: string;
   content: string;
   hashtags: string[];
 }>();
-
-const pictureNotFound = () => {
-  return import.meta.env.VITE_DEFAULT_IMAGE + Math.random();
-};
 </script>
 
 <style scoped>
 body {
   background: #e6ecf0;
 }
-img {
-  max-width: 100%;
-  max-height: 100%;
-}
 .content {
   padding-top: 15px;
 }
-.avator {
-  border-radius: 100px;
-  width: 48px;
-  margin-right: 15px;
-}
-
 .post-wrap {
   max-width: 490px;
   background: #fff;
