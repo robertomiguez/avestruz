@@ -1,15 +1,12 @@
 <template>
   <div class="post-wrap">
     <div class="post-header">
-      <image-user
-        :pubkey="pubkey"
-        :picture="picture"
-      />
+      <user-avatar :profile="profile as User" />
       <div class="post-header-info">
         <span class="tooltip"
-          >{{ truncate(displayName, 15) }}
-          <span class="tooltiptext">{{ displayName }}</span></span
-        ><span>. {{ moment }} </span>
+          >{{ name() }} <span class="tooltiptext">{{ name() }}</span></span
+        >
+        <span>. {{ moment }} </span>
         <div class="content">
           <content-media :content="content" />
         </div>
@@ -67,16 +64,25 @@ import {
 } from 'ionicons/icons';
 import ContentMedia from '@/components/ContentMedia.vue';
 import { truncate } from '@/composables/truncate';
-import ImageUser from '@/components/ImageUser.vue';
+import UserAvatar from '@/components/UserAvatar.vue';
+import { User } from '@/types/User';
 
-defineProps<{
+const props = defineProps<{
   pubkey: string;
-  displayName: string;
-  picture?: string;
   moment: string;
   content: string;
   hashtags: string[];
+  profile?: User;
 }>();
+
+const name = () => {
+  return truncate(
+    JSON.stringify(props.profile) === '{}'
+      ? props.pubkey // user not found in relay
+      : props.profile?.display_name ?? props.profile?.name ?? 'Anon',
+    15,
+  );
+};
 </script>
 
 <style scoped>

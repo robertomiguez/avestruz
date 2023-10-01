@@ -3,16 +3,14 @@
     <ion-header>
       <ion-toolbar>
         <ion-title
-          @click="cleanSelectedUser()"
+          @click="cleanSelectedProfile()"
           slot="start"
           style="cursor: pointer"
           >Avestruz</ion-title
         >
         <button-login slot="end" />
-        <image-user
-          v-show="profile?.pubkey"
-          :pubkey="profile?.pubkey ?? ''"
-          :picture="profile?.picture"
+        <user-avatar
+          :profile="profile as User"
           slot="end"
         />
       </ion-toolbar>
@@ -23,7 +21,10 @@
           <ion-title size="large">Feed</ion-title>
         </ion-toolbar>
       </ion-header>
-      <!-- <card-profile :profile="" /> -->
+      <card-profile
+        v-if="selectedProfile"
+        :profile="selectedProfile as User"
+      />
       <list-post />
     </ion-content>
   </ion-page>
@@ -39,19 +40,19 @@ import {
 } from '@ionic/vue';
 import ButtonLogin from '@/components/ButtonLogin.vue';
 import ListPost from '@/components/ListPost.vue';
-import ImageUser from '@/components/ImageUser.vue';
-// import CardProfile from '@/components/CardProfile.vue';
+import CardProfile from '@/components/CardProfile.vue';
 
 import { watchEffect } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useUtilStore } from '@/stores/utilStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import EventService from '@/services/EventService';
+import UserAvatar from '@/components/UserAvatar.vue';
 
 import type { User } from '@/types/User';
 
 const utilStore = useUtilStore();
-const { userSelected } = storeToRefs(utilStore);
+const { selectedProfile } = storeToRefs(utilStore);
 
 const settingsStore = useSettingsStore();
 const { publicKeyHex, profile } = storeToRefs(settingsStore);
@@ -70,12 +71,14 @@ watchEffect(async () => {
 watchEffect(async () => {
   // getting info about metadata and text notes.
   await EventService.getEvents(
-    userSelected.value ? [userSelected.value as string] : [],
+    selectedProfile.value?.pubkey
+      ? [selectedProfile.value?.pubkey as string]
+      : [],
   );
 });
 
-const cleanSelectedUser = () => {
-  userSelected.value = undefined;
+const cleanSelectedProfile = () => {
+  selectedProfile.value = undefined;
 };
 </script>
 

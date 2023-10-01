@@ -28,7 +28,7 @@ class EventService {
     return users;
   }
 
-  static async getEvents(userSelected: string[]): Promise<void> {
+  static async getEvents(pubkey: string[]): Promise<void> {
     const eventStore = useEventStore();
     const { textNotesUsers } = storeToRefs(eventStore);
 
@@ -46,7 +46,7 @@ class EventService {
         // authors: [
         //   '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack as na example
         // ],
-        ...(userSelected.length && { authors: userSelected }),
+        ...(pubkey.length && { authors: pubkey }),
       },
     ]);
 

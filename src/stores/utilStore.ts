@@ -1,14 +1,16 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { User } from '@/types/User';
 
 export const useUtilStore = defineStore(
   'utilStore',
   () => {
     const loading = ref<boolean>(false);
-    const userSelected = ref<string>();
+    const selectedProfile = ref<User>();
+
     return {
       loading,
-      userSelected,
+      selectedProfile,
     };
   },
   { persist: true },
