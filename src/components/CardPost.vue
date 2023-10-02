@@ -1,7 +1,10 @@
 <template>
   <div class="post-wrap">
     <div class="post-header">
-      <user-avatar :profile="profile as User" />
+      <user-avatar
+        v-if="profile"
+        :profile="profile as User"
+      />
       <div class="post-header-info">
         <span class="tooltip"
           >{{ name() }} <span class="tooltiptext">{{ name() }}</span></span
@@ -93,7 +96,7 @@ body {
   padding-top: 15px;
 }
 .post-wrap {
-  max-width: 490px;
+  max-width: 400px;
   background: #fff;
   margin: 0 auto;
   margin-top: 0px;
@@ -103,8 +106,6 @@ body {
   border-top: 1px solid #e6ecf0;
 }
 .post-header {
-  display: flex;
-  align-items: flex-start;
   font-size: 14px;
 }
 .post-header-info {

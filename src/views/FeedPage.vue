@@ -9,10 +9,14 @@
           >Avestruz</ion-title
         >
         <button-login slot="end" />
-        <user-avatar
-          :profile="profile as User"
+        <span
           slot="end"
-        />
+          style="margin-right: 5px"
+        >
+          <user-avatar
+            v-if="profile"
+            :profile="profile as User"
+        /></span>
       </ion-toolbar>
     </ion-header>
     <ion-content :fullscreen="true">

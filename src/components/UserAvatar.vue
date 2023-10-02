@@ -1,7 +1,6 @@
 <template>
   <ion-avatar
-    slot="end"
-    style="margin-right: 5px"
+    :class="cssAssigned === 'profile' ? 'avatar-profile' : 'avatar-post'"
   >
     <img
       alt=""
@@ -21,9 +20,15 @@ import { useUtilStore } from '@/stores/utilStore';
 import { User } from '@/types/User';
 import { IonAvatar } from '@ionic/vue';
 
-const props = defineProps<{
-  profile?: User;
-}>();
+const props = withDefaults(
+  defineProps<{
+    profile?: User;
+    cssAssigned?: string;
+  }>(),
+  {
+    cssAssigned: 'post',
+  },
+);
 
 const utilStore = useUtilStore();
 const { selectedProfile } = storeToRefs(utilStore);
@@ -40,9 +45,19 @@ const setProfile = () => {
 </script>
 
 <style scoped>
-ion-avatar {
+.avatar-profile {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  padding: 5px;
+  background-color: var(--white);
+  cursor: pointer;
+  text-align: center;
+  margin: 0px auto;
+}
+
+.avatar-post {
   max-width: 45px;
   max-height: 45px;
-  cursor: pointer;
 }
 </style>
