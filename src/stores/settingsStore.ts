@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import type { User } from '@/types/User';
 
 export const useSettingsStore = defineStore(
   'settingsStore',
@@ -8,13 +9,13 @@ export const useSettingsStore = defineStore(
     const privateKeyHex = ref<string>();
     const publicKeyNpub = ref<string>();
     const publicKeyHex = ref<string>();
-    const loading = ref<boolean>(false);
+    const profile = ref<User>();
     return {
       privateKeyNsec,
       privateKeyHex,
       publicKeyNpub,
       publicKeyHex,
-      loading,
+      profile,
     };
   },
   { persist: true },

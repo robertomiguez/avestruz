@@ -1,21 +1,15 @@
 <template>
   <div class="post-wrap">
     <div class="post-header">
-      <img
-        :src="
-          (picture as string) ?? // found on metadata
-          (pictureNotFound() as unknown as string) // Not found on metadata
-        "
-        alt=""
-        class="avator"
-        onerror="this.src='oistrich-64.png'"
+      <user-avatar
+        v-if="profile"
+        :profile="profile as User"
       />
-
       <div class="post-header-info">
         <span class="tooltip"
-          >{{ truncate(displayName, 15) }}
-          <span class="tooltiptext">{{ displayName }}</span></span
-        ><span>. {{ moment }} </span>
+          >{{ name() }} <span class="tooltiptext">{{ name() }}</span></span
+        >
+        <span>. {{ moment }} </span>
         <div class="content">
           <content-media :content="content" />
         </div>
@@ -73,17 +67,24 @@ import {
 } from 'ionicons/icons';
 import ContentMedia from '@/components/ContentMedia.vue';
 import { truncate } from '@/composables/truncate';
+import UserAvatar from '@/components/UserAvatar.vue';
+import { User } from '@/types/User';
 
-defineProps<{
-  displayName: string;
-  picture?: string;
+const props = defineProps<{
+  pubkey: string;
   moment: string;
   content: string;
   hashtags: string[];
+  profile?: User;
 }>();
 
-const pictureNotFound = () => {
-  return import.meta.env.VITE_DEFAULT_IMAGE + Math.random();
+const name = () => {
+  return truncate(
+    JSON.stringify(props.profile) === '{}'
+      ? props.pubkey // user not found in relay
+      : props.profile?.display_name ?? props.profile?.name ?? 'Anon',
+    15,
+  );
 };
 </script>
 
@@ -91,21 +92,11 @@ const pictureNotFound = () => {
 body {
   background: #e6ecf0;
 }
-img {
-  max-width: 100%;
-  max-height: 100%;
-}
 .content {
   padding-top: 15px;
 }
-.avator {
-  border-radius: 100px;
-  width: 48px;
-  margin-right: 15px;
-}
-
 .post-wrap {
-  max-width: 490px;
+  max-width: 400px;
   background: #fff;
   margin: 0 auto;
   margin-top: 0px;
@@ -115,8 +106,6 @@ img {
   border-top: 1px solid #e6ecf0;
 }
 .post-header {
-  display: flex;
-  align-items: flex-start;
   font-size: 14px;
 }
 .post-header-info {

@@ -2,8 +2,21 @@
   <ion-page>
     <ion-header>
       <ion-toolbar>
-        <ion-title slot="start">Avestruz</ion-title>
+        <ion-title
+          @click="cleanSelectedProfile()"
+          slot="start"
+          style="cursor: pointer"
+          >Avestruz</ion-title
+        >
         <button-login slot="end" />
+        <span
+          slot="end"
+          style="margin-right: 5px"
+        >
+          <user-avatar
+            v-if="profile"
+            :profile="profile as User"
+        /></span>
       </ion-toolbar>
     </ion-header>
     <ion-content :fullscreen="true">
@@ -12,29 +25,11 @@
           <ion-title size="large">Feed</ion-title>
         </ion-toolbar>
       </ion-header>
-      <card-post
-        v-for="textNoteUser of textNotesUsers"
-        :key="textNoteUser.textNote.id"
-        :displayName="
-          JSON.stringify(textNoteUser.user) === '{}'
-            ? textNoteUser.textNote?.pubkey // user not found in relay
-            : textNoteUser.user?.display_name ??
-              textNoteUser.user?.name ??
-              'Anon'
-        "
-        :picture="textNoteUser.user?.picture as string"
-        :moment="
-          formatDistance(
-            fromUnixTime(textNoteUser.textNote.created_at),
-            Date.now(),
-            { addSuffix: true },
-          )
-        "
-        :content="textNoteUser.textNote.content"
-        :hashtags="
-          textNoteUser.textNote.tags.filter(t => t[0] === 't').map(t => t[1])
-        "
+      <card-profile
+        v-if="selectedProfile"
+        :profile="selectedProfile as User"
       />
+      <list-post />
     </ion-content>
   </ion-page>
 </template>
@@ -47,20 +42,48 @@ import {
   IonTitle,
   IonContent,
 } from '@ionic/vue';
-import { onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useEventStore } from '@/stores/eventStore';
-import { fromUnixTime, formatDistance } from 'date-fns';
-import EventService from '@/services/EventService';
 import ButtonLogin from '@/components/ButtonLogin.vue';
-import CardPost from '@/components/CardPost.vue';
+import ListPost from '@/components/ListPost.vue';
+import CardProfile from '@/components/CardProfile.vue';
 
-const eventStore = useEventStore();
-const { textNotesUsers } = storeToRefs(eventStore);
+import { watchEffect } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useUtilStore } from '@/stores/utilStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import EventService from '@/services/EventService';
+import UserAvatar from '@/components/UserAvatar.vue';
 
-onMounted(async () => {
-  await EventService.getEvents();
+import type { User } from '@/types/User';
+
+const utilStore = useUtilStore();
+const { selectedProfile } = storeToRefs(utilStore);
+
+const settingsStore = useSettingsStore();
+const { publicKeyHex, profile } = storeToRefs(settingsStore);
+
+watchEffect(async () => {
+  // getting info about you.
+  if (!publicKeyHex.value) {
+    console.warn('not logged');
+    return;
+  }
+  profile.value = (
+    await EventService.getMetadatas([publicKeyHex.value as string])
+  )[0] as User;
 });
+
+watchEffect(async () => {
+  // getting info about metadata and text notes.
+  await EventService.getEvents(
+    selectedProfile.value?.pubkey
+      ? [selectedProfile.value?.pubkey as string]
+      : [],
+  );
+});
+
+const cleanSelectedProfile = () => {
+  selectedProfile.value = undefined;
+};
 </script>
 
 <style scoped></style>
