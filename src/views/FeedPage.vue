@@ -30,6 +30,10 @@
         :profile="selectedProfile as User"
       />
       <list-post />
+      <ion-spinner
+        v-show="loading"
+        name="circles"
+      ></ion-spinner>
     </ion-content>
   </ion-page>
 </template>
@@ -41,6 +45,7 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
+  IonSpinner,
 } from '@ionic/vue';
 import ButtonLogin from '@/components/ButtonLogin.vue';
 import ListPost from '@/components/ListPost.vue';
@@ -56,7 +61,7 @@ import UserAvatar from '@/components/UserAvatar.vue';
 import type { User } from '@/types/User';
 
 const utilStore = useUtilStore();
-const { selectedProfile } = storeToRefs(utilStore);
+const { selectedProfile, loading } = storeToRefs(utilStore);
 
 const settingsStore = useSettingsStore();
 const { publicKeyHex, profile } = storeToRefs(settingsStore);
@@ -86,4 +91,11 @@ const cleanSelectedProfile = () => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+ion-spinner {
+  top: 3%;
+  left: 50%;
+  position: relative;
+  transform: translate(-50%, -50%);
+}
+</style>

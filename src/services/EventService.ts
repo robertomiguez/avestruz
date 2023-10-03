@@ -2,11 +2,16 @@ import { SimplePool } from 'nostr-tools';
 import { storeToRefs } from 'pinia';
 import type { User } from '@/types/User';
 import { useEventStore } from '@/stores/eventStore';
+import { useUtilStore } from '@/stores/utilStore';
 
 class EventService {
   static relays: string[] = import.meta.env.VITE_RELAYS.split(',');
+  static eventStore = useEventStore();
+  static utilStore = useUtilStore();
 
   static async getMetadatas(authors: string[]): Promise<User[]> {
+    const { loading } = storeToRefs(EventService.utilStore);
+    loading.value = true;
     if (!authors) return [];
     const pool = new SimplePool();
 
@@ -24,13 +29,15 @@ class EventService {
         ...JSON.parse(metadata?.content as string),
       };
     });
-
+    loading.value = false;
     return users;
   }
 
   static async getEvents(pubkey: string[]): Promise<void> {
-    const eventStore = useEventStore();
-    const { textNotesUsers } = storeToRefs(eventStore);
+    const { loading } = storeToRefs(EventService.utilStore);
+    loading.value = true;
+    const { textNotesUsers } = storeToRefs(EventService.eventStore);
+    textNotesUsers.value = [];
 
     if (!EventService.relays) {
       console.error('No Relay address registered.');
@@ -58,6 +65,7 @@ class EventService {
     });
 
     pool.close(EventService.relays);
+    loading.value = false;
 
     return;
   }
