@@ -14,7 +14,16 @@
             :profile="profile as User"
           />
         </div>
-        <div class="name">{{ profile.name }} {{ profile.display_name }}</div>
+        <div class="name">
+          {{ profile.name }} {{ profile.display_name }}
+          <ion-icon
+            v-show="profile?.checked"
+            :icon="personCircleOutline"
+            class="icon-verified"
+          ></ion-icon>
+        </div>
+        <div class="nip05">{{ profile?.nip05 }}</div>
+        <div class="pubkey">{{ profile.pubkey }}</div>
         <div class="intro">
           <p>
             {{ profile.about }}
@@ -36,6 +45,8 @@
 <script setup lang="ts">
 import UserAvatar from '@/components/UserAvatar.vue';
 import type { User } from '@/types/User';
+import { IonIcon } from '@ionic/vue';
+import { personCircleOutline } from 'ionicons/icons';
 
 defineProps<{
   profile: User;
@@ -84,15 +95,29 @@ img {
 }
 
 .card .body .name {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
+.card .body .nip05 {
+  font-size: 11px;
+  font-weight: 200;
+  line-height: 1.6;
+  margin: 10px 0px 0px 0px;
+}
+
+.card .body .pubkey {
+  font-size: 11px;
+  font-weight: 200;
+  line-height: 1.6;
+  margin: 10px 0px 0px 0px;
+}
+
 .card .body .intro {
   font-size: 14px;
   font-weight: 400;
   line-height: 1.6;
-  margin: 20px 0px 30px 0px;
+  margin: 10px 0px 50px 0px;
 }
 
 .card .body .info-counts {

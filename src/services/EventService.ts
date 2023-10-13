@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia';
 import type { User } from '@/types/User';
 import { useEventStore } from '@/stores/eventStore';
 import { useUtilStore } from '@/stores/utilStore';
+import NipService from '@/services/NipService';
 
 class EventService {
   static relays: string[] = import.meta.env.VITE_RELAYS.split(',');
@@ -23,14 +24,27 @@ class EventService {
     ]);
 
     pool.close(EventService.relays);
-    const users = metadatas.map(metadata => {
+
+    const fillUser = async (metadata: any) => {
+      const content = JSON.parse(metadata?.content as string);
+      if (content.nip05 !== undefined) {
+        content.checked = await NipService.isVerified(
+          content?.nip05,
+          metadata.pubkey,
+        );
+      }
       return {
         ...{ pubkey: metadata.pubkey },
-        ...JSON.parse(metadata?.content as string),
+        ...content,
       };
-    });
+    };
+
+    const users = async () => {
+      return Promise.all(metadatas.map(metadata => fillUser(metadata)));
+    };
+
     loading.value = false;
-    return users;
+    return await users();
   }
 
   static async getEvents(pubkey: string[]): Promise<void> {
@@ -59,6 +73,7 @@ class EventService {
 
     const authors = textNotes.map(textNote => textNote.pubkey);
     const users = await EventService.getMetadatas(authors);
+    console.table(users);
     textNotesUsers.value = textNotes.map(textNote => {
       const user: User = users.find(u => u.pubkey === textNote.pubkey) as User;
       return { textNote, user };

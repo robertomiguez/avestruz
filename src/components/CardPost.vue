@@ -9,7 +9,14 @@
         <span class="tooltip"
           >{{ name() }} <span class="tooltiptext">{{ name() }}</span></span
         >
-        <span>. {{ moment }} </span>
+        <span>
+          <ion-icon
+            v-show="profile?.checked"
+            :icon="personCircleOutline"
+            class="icon-verified"
+          ></ion-icon>
+          {{ moment }}
+        </span>
         <div class="content">
           <content-media :content="content" />
         </div>
@@ -64,6 +71,7 @@ import {
   swapHorizontalOutline,
   heartOutline,
   navigateOutline,
+  personCircleOutline,
 } from 'ionicons/icons';
 import ContentMedia from '@/components/ContentMedia.vue';
 import { truncate } from '@/composables/truncate';
@@ -82,7 +90,7 @@ const name = () => {
   return truncate(
     JSON.stringify(props.profile) === '{}'
       ? props.pubkey // user not found in relay
-      : props.profile?.display_name ?? props.profile?.name ?? 'Anon',
+      : props.profile?.name ?? props.profile?.display_name ?? 'Anon',
     15,
   );
 };

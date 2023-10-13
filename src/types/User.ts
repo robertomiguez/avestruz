@@ -6,4 +6,6 @@ export interface User {
   about: string;
   name: string;
   pubkey: string;
+  checked?: boolean;
+  nip05?: string;
 }
