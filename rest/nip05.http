@@ -1,0 +1,2 @@
+GET https://site.io/.well-known/nostr.json?name=joedoe
+content-type: application/json
