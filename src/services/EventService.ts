@@ -3,7 +3,8 @@ import { storeToRefs } from 'pinia';
 import type { User } from '@/types/User';
 import { useEventStore } from '@/stores/eventStore';
 import { useUtilStore } from '@/stores/utilStore';
-import NipService from '@/services/NipService';
+import { nip05 } from 'nostr-tools';
+// import { getUnixTime } from 'date-fns';
 
 class EventService {
   static relays: string[] = import.meta.env.VITE_RELAYS.split(',');
@@ -28,10 +29,8 @@ class EventService {
     const fillUser = async (metadata: any) => {
       const content = JSON.parse(metadata?.content as string);
       if (content.nip05 !== undefined) {
-        content.checked = await NipService.isVerified(
-          content?.nip05,
-          metadata.pubkey,
-        );
+        const profile = await nip05.queryProfile(content.nip05);
+        content.checked = profile?.pubkey === metadata.pubkey;
       }
       return {
         ...{ pubkey: metadata.pubkey },
@@ -59,18 +58,26 @@ class EventService {
     }
     const pool = new SimplePool();
 
+    // const since = getUnixTime(new Date()) - 60 * 60 * 1000;
+    // const until = getUnixTime(new Date()) - 10 * 60 * 1000;
     const textNotes = await pool.list(EventService.relays, [
       {
         kinds: [1], // 0 metadata, 1 text note
         limit: +import.meta.env.VITE_SUB_LIMIT,
+        // since,
+        // until,
         // '#t': ['nostr'], //tags
         // authors: [
-        //   '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack as na example
+        //   'ee6ea13ab9fe5c4a68eaf9b1a34fe014a66b40117c50ee2a614f4cda959b6e74',
         // ],
         ...(pubkey.length && { authors: pubkey }),
       },
     ]);
 
+    if (!textNotes.length) {
+      console.error('textNotes empty.');
+      return;
+    }
     const authors = textNotes.map(textNote => textNote.pubkey);
     const users = await EventService.getMetadatas(authors);
     console.table(users);
