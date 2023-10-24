@@ -1,7 +1,7 @@
 <template>
   <card-post
     v-for="textNoteUser of textNotesUsers"
-    :key="textNoteUser.textNote.id"
+    :key="textNoteUser.textNote.id + textNoteUser.textNote.relay"
     :pubkey="textNoteUser.textNote?.pubkey as string"
     :moment="
       formatDistance(
