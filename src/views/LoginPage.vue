@@ -71,6 +71,7 @@ import {
 import { useSettingsStore } from '@/stores/settingsStore';
 import { storeToRefs } from 'pinia';
 import router from '@/router';
+import EventService from '@/services/EventService';
 const settingsStore = useSettingsStore();
 const { privateKeyNsec, privateKeyHex, publicKeyNpub, publicKeyHex } =
   storeToRefs(settingsStore);
@@ -91,6 +92,11 @@ const login = () => {
     privateKeyHex.value = prHex as string;
     publicKeyHex.value = getPublicKey(privateKeyHex.value as string);
     publicKeyNpub.value = nip19.npubEncode(publicKeyHex.value);
+    const relays: string[] = import.meta.env.VITE_RELAYS.split(',');
+
+    for (const relay of relays) {
+      EventService.initializeWsMyUser(relay, [publicKeyHex.value]);
+    }
     back();
   } catch (error) {
     privateKeyNsec.value = undefined;

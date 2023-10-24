@@ -8,4 +8,5 @@ export interface User {
   pubkey: string;
   checked?: boolean;
   nip05?: string;
+  relay: string;
 }

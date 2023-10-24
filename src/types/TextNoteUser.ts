@@ -1,6 +1,6 @@
-import type { Event } from 'nostr-tools';
+import { TextNote } from '@/types/TextNote';
 import { User } from '@/types/User';
 export interface TextNoteUser {
-  textNote: Event;
+  textNote: TextNote;
   user?: User;
 }

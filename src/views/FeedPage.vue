@@ -28,6 +28,7 @@
       <card-profile
         v-if="selectedProfile"
         :profile="selectedProfile as User"
+        :publicKeyHex="publicKeyHex as string"
       />
       <list-post />
       <ion-spinner
@@ -51,7 +52,7 @@ import ButtonLogin from '@/components/ButtonLogin.vue';
 import ListPost from '@/components/ListPost.vue';
 import CardProfile from '@/components/CardProfile.vue';
 
-import { watchEffect } from 'vue';
+import { onMounted, watchEffect } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useUtilStore } from '@/stores/utilStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -66,20 +67,9 @@ const { selectedProfile, loading } = storeToRefs(utilStore);
 const settingsStore = useSettingsStore();
 const { publicKeyHex, profile } = storeToRefs(settingsStore);
 
-watchEffect(async () => {
-  // getting info about you.
-  if (!publicKeyHex.value) {
-    console.warn('not logged');
-    return;
-  }
-  profile.value = (
-    await EventService.getMetadatas([publicKeyHex.value as string])
-  )[0] as User;
-});
-
-watchEffect(async () => {
+watchEffect(() => {
   // getting info about metadata and text notes.
-  await EventService.getEvents(
+  EventService.getEvents(
     selectedProfile.value?.pubkey
       ? [selectedProfile.value?.pubkey as string]
       : [],
@@ -89,6 +79,13 @@ watchEffect(async () => {
 const cleanSelectedProfile = () => {
   selectedProfile.value = undefined;
 };
+
+onMounted(() => {
+  if (!publicKeyHex.value) {
+    console.warn('not logged');
+    return;
+  }
+});
 </script>
 
 <style scoped>

@@ -30,6 +30,7 @@
         </div>
       </div>
     </div>
+    <span class="relay">{{ profile?.relay }}</span>
     <div class="post-info-counts">
       <div class="comments">
         <ion-icon
@@ -102,6 +103,9 @@ body {
 }
 .content {
   padding-top: 15px;
+}
+.relay {
+  font-size: x-small;
 }
 .post-wrap {
   max-width: 400px;

@@ -21,6 +21,12 @@
             :icon="personCircleOutline"
             class="icon-verified"
           ></ion-icon>
+          <ion-icon
+            v-show="props.publicKeyHex === props.profile.pubkey"
+            :icon="refreshCircleOutline"
+            class="icon-verified"
+            @click="updateMyProfile"
+          ></ion-icon>
         </div>
         <div class="nip05">{{ profile?.nip05 }}</div>
         <div class="pubkey">{{ profile.pubkey }}</div>
@@ -44,13 +50,25 @@
 
 <script setup lang="ts">
 import UserAvatar from '@/components/UserAvatar.vue';
+import EventService from '@/services/EventService';
 import type { User } from '@/types/User';
 import { IonIcon } from '@ionic/vue';
-import { personCircleOutline } from 'ionicons/icons';
+import { personCircleOutline, refreshCircleOutline } from 'ionicons/icons';
 
-defineProps<{
+const props = defineProps<{
   profile: User;
+  publicKeyHex: string;
 }>();
+
+const updateMyProfile = () => {
+  const relays: string[] = import.meta.env.VITE_RELAYS.split(',');
+
+  if (props.publicKeyHex === props.profile.pubkey) {
+    for (const relay of relays) {
+      EventService.initializeWsMyUser(relay, [props.profile.pubkey]);
+    }
+  }
+};
 </script>
 
 <style scoped>
