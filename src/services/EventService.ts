@@ -4,7 +4,6 @@ import type { User } from '@/types/User';
 import { useEventStore } from '@/stores/eventStore';
 import { useUtilStore } from '@/stores/utilStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { getUnixTime } from 'date-fns';
 import { nip05 } from 'nostr-tools';
 
 class EventService {
@@ -16,8 +15,6 @@ class EventService {
   private static users: User[] = [];
   private static textNotesUsers = storeToRefs(EventService.eventStore)
     .textNotesUsers;
-
-  // static async getMyUser(pubkey: string[]): Promise<void> {}
 
   private static wsOpen = (
     ws: WebSocket,
@@ -133,8 +130,6 @@ class EventService {
       console.error('No Relay address registered.');
       return;
     }
-
-    // const since = getUnixTime(new Date()) - 120 * 60 * 1000;
 
     EventService.loading.value = true;
     EventService.textNotes = [];

@@ -1,22 +1,23 @@
 <template>
   <div class="post-wrap">
     <div class="post-header">
-      <user-avatar
-        v-if="profile"
-        :profile="profile as User"
-      />
       <div class="post-header-info">
-        <span class="tooltip"
-          >{{ name() }} <span class="tooltiptext">{{ name() }}</span></span
-        >
-        <span>
+        <user-avatar
+          v-if="profile"
+          :profile="profile as User"
+          class="avatar"
+        />
+        <span class="name"
+          >{{ name() }}
           <ion-icon
             v-show="profile?.checked"
             :icon="personCircleOutline"
             class="icon-verified"
           ></ion-icon>
-          {{ moment }}
-        </span>
+          <span>
+            {{ moment }}
+          </span></span
+        >
         <div class="content">
           <content-media :content="content" />
         </div>
@@ -101,7 +102,18 @@ const name = () => {
 body {
   background: #e6ecf0;
 }
+
+.avatar {
+  float: left; /* Float the avatar to the left */
+  margin-right: 10px; /* Add some spacing between the image and the text */
+}
+
+.name {
+  display: block; /* Make the text a block element to ensure it appears below the image */
+}
+
 .content {
+  display: block;
   padding-top: 15px;
 }
 .relay {
@@ -147,38 +159,6 @@ body {
 .post-info-counts div svg {
   color: #657786;
   margin-right: 10px;
-}
-
-.tooltip {
-  position: relative;
-  display: inline-block;
-  border-bottom: 1px black;
-}
-.tooltip .tooltiptext {
-  visibility: hidden;
-  width: 180px;
-  background-color: black;
-  color: #fff;
-  text-align: center;
-  border-radius: 6px;
-  padding: 5px 0;
-  position: absolute;
-  z-index: 1;
-  top: -5px;
-  left: 110%;
-}
-.tooltip .tooltiptext::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 100%;
-  margin-top: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: transparent black transparent transparent;
-}
-.tooltip:hover .tooltiptext {
-  visibility: visible;
 }
 
 @media screen and (max-width: 430px) {

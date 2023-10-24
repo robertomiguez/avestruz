@@ -3,13 +3,7 @@
     v-for="textNoteUser of textNotesUsers"
     :key="textNoteUser.textNote.id + textNoteUser.textNote.relay"
     :pubkey="textNoteUser.textNote?.pubkey as string"
-    :moment="
-      formatDistance(
-        fromUnixTime(textNoteUser.textNote.created_at),
-        Date.now(),
-        { addSuffix: true },
-      )
-    "
+    :moment="formatTimeDifference(textNoteUser.textNote.created_at)"
     :content="textNoteUser.textNote.content"
     :hashtags="
       textNoteUser.textNote.tags.filter(t => t[0] === 't').map(t => t[1])
@@ -21,9 +15,9 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useEventStore } from '@/stores/eventStore';
-import { fromUnixTime, formatDistance } from 'date-fns';
 import CardPost from '@/components/CardPost.vue';
 import { User } from '@/types/User';
+import { formatTimeDifference } from '@/composables/formatTimeDifference';
 
 const eventStore = useEventStore();
 const { textNotesUsers } = storeToRefs(eventStore);
