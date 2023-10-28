@@ -68,10 +68,10 @@ import {
   IonCol,
   IonRow,
 } from '@ionic/vue';
-import { useSettingsStore } from '@/stores/settingsStore';
-import { storeToRefs } from 'pinia';
 import router from '@/router';
 import EventService from '@/services/EventService';
+import { storeToRefs } from 'pinia';
+import { useSettingsStore } from '@/stores/settingsStore';
 const settingsStore = useSettingsStore();
 const { privateKeyNsec, privateKeyHex, publicKeyNpub, publicKeyHex } =
   storeToRefs(settingsStore);

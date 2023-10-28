@@ -30,6 +30,7 @@
         :profile="selectedProfile as User"
         :publicKeyHex="publicKeyHex as string"
       />
+      <publish-note v-if="!selectedProfile" />
       <list-post />
       <ion-spinner
         v-show="loading"
@@ -58,6 +59,7 @@ import { useUtilStore } from '@/stores/utilStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import EventService from '@/services/EventService';
 import UserAvatar from '@/components/UserAvatar.vue';
+import PublishNote from '@/components/PublishNote.vue';
 
 import type { User } from '@/types/User';
 

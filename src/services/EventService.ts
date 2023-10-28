@@ -4,12 +4,19 @@ import type { User } from '@/types/User';
 import { useEventStore } from '@/stores/eventStore';
 import { useUtilStore } from '@/stores/utilStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { nip05 } from 'nostr-tools';
+import {
+  nip05,
+  finishEvent,
+  SimplePool,
+  validateEvent,
+  verifySignature,
+} from 'nostr-tools';
 
 class EventService {
-  static relays: string[] = import.meta.env.VITE_RELAYS.split(',');
-  static eventStore = useEventStore();
-  static utilStore = useUtilStore();
+  private static relays: string[] = import.meta.env.VITE_RELAYS.split(',');
+  private static eventStore = useEventStore();
+  private static utilStore = useUtilStore();
+  private static settingsStore = useSettingsStore();
   private static loading = storeToRefs(EventService.utilStore).loading;
   private static textNotes: TextNote[] = [];
   private static users: User[] = [];
@@ -42,6 +49,12 @@ class EventService {
       fn(ws, relay, messageData);
     });
   };
+
+  // static wsClose(ws: WebSocket) {
+  //   ws.addEventListener('close', event => {
+  //     console.log('ws', event);
+  //   });
+  // }
 
   private static fillTextNote = (
     ws: WebSocket,
@@ -123,6 +136,7 @@ class EventService {
     const wsMetadata = new WebSocket(relay);
     EventService.wsOpen(wsMetadata, relay, authors, 0);
     EventService.wsMessage(wsMetadata, relay, EventService.fillMetadata);
+    // EventService.wsClose(wsMetadata);
   };
 
   static getEvents(pubkey: string[]): void {
@@ -135,9 +149,7 @@ class EventService {
     EventService.textNotes = [];
     EventService.users = [];
 
-    const relays: string[] = import.meta.env.VITE_RELAYS.split(',');
-
-    for (const relay of relays) {
+    for (const relay of EventService.relays) {
       EventService.initializeTextNote(relay, pubkey);
     }
 
@@ -149,12 +161,8 @@ class EventService {
     relay: string,
     messageData: any,
   ) => {
-    //TODO: STATIC
-    const settingsStore = useSettingsStore();
-    const { profile } = storeToRefs(settingsStore);
+    const { profile } = storeToRefs(EventService.settingsStore);
     if (messageData != null) {
-      // const content = JSON.parse(messageData.content);
-      // const pubkey = messageData.pubkey;
       profile.value = {
         ...JSON.parse(messageData.content),
         ...{ pubkey: messageData.pubkey },
@@ -171,9 +179,33 @@ class EventService {
     EventService.wsMessage(wsMetadata, relay, EventService.fillMyUser);
   };
 
+  static async publishNote(content: string) {
+    const pool = new SimplePool();
+
+    const event = {
+      kind: 1,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [],
+      content,
+    };
+    const { privateKeyHex } = storeToRefs(EventService.settingsStore);
+    const signedEvent = finishEvent(event, privateKeyHex.value as string);
+
+    const valid = validateEvent(signedEvent);
+    const verified = verifySignature(signedEvent);
+    if (!valid || !verified) {
+      console.error('invalid event');
+      return;
+    }
+
+    const pubs = pool.publish(EventService.relays, signedEvent);
+    await Promise.all(pubs);
+    pool.close;
+    EventService.getEvents();
+  }
+
   // static getMyUser(pubkey: string[]): void {
   //   //TODO static
-  //   const relays: string[] = import.meta.env.VITE_RELAYS.split(',');
   //   for (const relay of relays) {
   //     // EventService.initializeWsMyUser(relay, pubkey);
   //     EventService.initializeTextNote(relay, pubkey);
