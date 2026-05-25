@@ -1,72 +1,118 @@
 <template>
-  <div class="post-wrap">
-    <div class="post-header">
-      <div class="post-header-info">
-        <user-avatar
-          v-if="profile"
-          :profile="profile as User"
-          class="avatar"
-        />
-        <span class="name"
-          >{{ name() }}
+  <article class="post-card">
+    <header class="post-header">
+      <user-avatar
+        v-if="profile"
+        :profile="profile as User"
+        class="avatar"
+      />
+      <div
+        v-else
+        class="avatar-fallback"
+        aria-hidden="true"
+      >
+        {{ pubkey.slice(0, 2) }}
+      </div>
+
+      <div class="author-block">
+        <div class="author-row">
+          <strong
+            class="author-name"
+            :title="displayName"
+          >
+            {{ displayName }}
+          </strong>
           <ion-icon
             v-show="profile?.checked"
             :icon="personCircleOutline"
-            class="icon-verified"
+            class="verified-icon"
+            aria-label="Verified NIP-05"
           ></ion-icon>
-          <span>
-            {{ moment }}
-          </span></span
+          <span class="timestamp">{{ moment }}</span>
+        </div>
+        <span
+          class="pubkey"
+          :title="pubkey"
         >
-        <div class="content">
-          <content-media :content="content" />
-        </div>
-        <div class="content">
-          <ion-chip
-            v-for="hashtag of hashtags"
-            :key="hashtag"
-            color="medium"
-            >{{ hashtag }}</ion-chip
-          >
-        </div>
+          {{ shortPubkey }}
+        </span>
       </div>
-    </div>
-    <span class="relay">{{ profile?.relay }}</span>
-    <div class="post-info-counts">
-      <div class="comments">
-        <ion-icon
-          aria-hidden="true"
-          :icon="chatbubbleOutline"
-        />
-        <div class="comment-count">33</div>
-      </div>
-      <div class="reposts">
-        <ion-icon
-          aria-hidden="true"
-          :icon="swapHorizontalOutline"
-        />
-        <div class="repost-count">397</div>
-      </div>
+    </header>
 
-      <div class="likes">
-        <ion-icon
-          aria-hidden="true"
-          :icon="heartOutline"
-        />
-        <div class="likes-count">2.6k</div>
-      </div>
-
-      <div class="message">
-        <ion-icon
-          aria-hidden="true"
-          :icon="navigateOutline"
-        />
-      </div>
+    <div class="post-content">
+      <content-media :content="content" />
     </div>
-  </div>
+
+    <div
+      v-if="hashtags.length"
+      class="hashtags"
+    >
+      <ion-chip
+        v-for="hashtag of hashtags"
+        :key="hashtag"
+        color="medium"
+        class="hashtag"
+      >
+        #{{ hashtag }}
+      </ion-chip>
+    </div>
+
+    <footer class="post-footer">
+      <span
+        class="relay"
+        :title="relay"
+      >
+        {{ relay }}
+      </span>
+
+      <div class="post-actions">
+        <button
+          class="icon-button"
+          type="button"
+          aria-label="Reply"
+        >
+          <ion-icon
+            aria-hidden="true"
+            :icon="chatbubbleOutline"
+          />
+        </button>
+        <button
+          class="icon-button"
+          type="button"
+          aria-label="Repost"
+        >
+          <ion-icon
+            aria-hidden="true"
+            :icon="swapHorizontalOutline"
+          />
+        </button>
+        <button
+          class="icon-button"
+          type="button"
+          aria-label="Like"
+        >
+          <ion-icon
+            aria-hidden="true"
+            :icon="heartOutline"
+          />
+        </button>
+        <button
+          class="icon-button"
+          type="button"
+          aria-label="Share"
+        >
+          <ion-icon
+            aria-hidden="true"
+            :icon="navigateOutline"
+          />
+        </button>
+      </div>
+    </footer>
+  </article>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { IonIcon, IonChip } from '@ionic/vue';
 import {
   chatbubbleOutline,
@@ -85,105 +131,149 @@ const props = defineProps<{
   moment: string;
   content: string;
   hashtags: string[];
+  relay: string;
   profile?: User;
 }>();
 
-const name = () => {
-  return truncate(
-    JSON.stringify(props.profile) === '{}'
-      ? props.pubkey // user not found in relay
-      : props.profile?.name ?? props.profile?.display_name ?? 'Anon',
-    15,
-  );
-};
+const displayName = computed(() =>
+  truncate(
+    props.profile?.name ?? props.profile?.display_name ?? props.pubkey ?? 'Anon',
+    28,
+  ),
+);
+
+const shortPubkey = computed(() => truncate(props.pubkey, 18));
 </script>
 
 <style scoped>
-body {
-  background: #e6ecf0;
+.post-card {
+  width: 100%;
+  background: #fbfdff;
+  border: 1px solid #cfe3ff;
+  border-left: 4px solid #3dc2ff;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.post-card:nth-child(even) {
+  background: #f6fbff;
+  border-left-color: #5260ff;
+}
+
+.post-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .avatar {
-  float: left; /* Float the avatar to the left */
-  margin-right: 10px; /* Add some spacing between the image and the text */
+  flex: 0 0 auto;
 }
 
-.name {
-  display: block; /* Make the text a block element to ensure it appears below the image */
+.author-block {
+  min-width: 0;
 }
 
-.content {
-  display: block;
-  padding-top: 15px;
+.author-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
 }
+
+.author-name {
+  overflow: hidden;
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.verified-icon {
+  flex: 0 0 auto;
+  color: #2563eb;
+  font-size: 16px;
+}
+
+.timestamp,
+.pubkey,
 .relay {
-  font-size: x-small;
-}
-.post-wrap {
-  max-width: 400px;
-  background: #fff;
-  margin: 0 auto;
-  margin-top: 0px;
-  border-radius: 3px;
-  padding: 30px;
-  border-bottom: 1px solid #e6ecf0;
-  border-top: 1px solid #e6ecf0;
-}
-.post-header {
-  font-size: 14px;
-}
-.post-header-info {
-  font-weight: bold;
-}
-.post-header-info span {
-  color: #657786;
-  font-weight: normal;
-  margin-left: 5px;
-}
-.post-header-info p {
-  font-weight: normal;
-  margin-top: 5px;
-}
-.post-img-wrap {
-  padding-left: 60px;
-}
-.post-info-counts {
-  display: flex;
-  margin-left: 60px;
-  margin-top: 10px;
-}
-.post-info-counts div {
-  display: flex;
-  margin-right: 20px;
-}
-.post-info-counts div svg {
-  color: #657786;
-  margin-right: 10px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
-@media screen and (max-width: 430px) {
-  body {
-    padding-left: 20px;
-    padding-right: 20px;
+.post-content {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.hashtag {
+  margin: 0;
+}
+
+.post-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.relay {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  background: #eff6ff;
+  color: #3880ff;
+  outline: none;
+}
+
+@media (max-width: 430px) {
+  .post-card {
+    padding: 16px;
   }
-  .post-header {
+
+  .post-footer {
+    align-items: flex-start;
     flex-direction: column;
-  }
-  .post-header img {
-    margin-bottom: 20px;
-  }
-  .post-header-info p {
-    margin-bottom: 30px;
-  }
-  .post-img-wrap {
-    padding-left: 0;
-  }
-  .post-info-counts {
-    display: flex;
-    margin-left: 0;
-  }
-  .post-info-counts div {
-    margin-right: 10px;
   }
 }
 </style>

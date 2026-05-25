@@ -4,17 +4,15 @@
   >
     <img
       alt=""
-      :src="
-        (profile?.picture as string) ?? // found on metadata
-        (pictureNotFound() as unknown as string) // Not found on metadata
-      "
-      @click="setProfile()"
-      onerror="this.src='oistrich-64.png'"
+      :src="avatarSrc"
+      @click="setProfile"
+      @error="useFallback"
     />
   </ion-avatar>
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useUtilStore } from '@/stores/utilStore';
 import { User } from '@/types/User';
@@ -32,9 +30,17 @@ const props = withDefaults(
 
 const utilStore = useUtilStore();
 const { selectedProfile } = storeToRefs(utilStore);
+const fallbackSrc = ref('oistrich-64.png');
 
-const pictureNotFound = () => {
-  return import.meta.env.VITE_DEFAULT_IMAGE + Math.random();
+const avatarSrc = computed(
+  () =>
+    props.profile?.picture ||
+    `${import.meta.env.VITE_DEFAULT_IMAGE}${props.profile?.pubkey ?? 'anon'}`,
+);
+
+const useFallback = (event: Event) => {
+  const image = event.target as HTMLImageElement;
+  image.src = fallbackSrc.value;
 };
 
 const setProfile = () => {
@@ -46,18 +52,16 @@ const setProfile = () => {
 
 <style scoped>
 .avatar-profile {
-  width: 170px;
-  height: 170px;
-  border-radius: 50%;
-  padding: 5px;
-  background-color: var(--white);
+  width: 108px;
+  height: 108px;
+  border: 4px solid #ffffff;
+  background-color: #ffffff;
   cursor: pointer;
-  text-align: center;
-  margin: 0px auto;
 }
 
 .avatar-post {
-  max-width: 45px;
-  max-height: 45px;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
 }
 </style>

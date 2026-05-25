@@ -8,7 +8,8 @@
     :hashtags="
       textNoteUser.textNote.tags.filter(t => t[0] === 't').map(t => t[1])
     "
-    :profile="textNoteUser.user as User"
+    :relay="textNoteUser.textNote.relay"
+    :profile="textNoteUser.user"
   />
 </template>
 
@@ -16,7 +17,6 @@
 import { storeToRefs } from 'pinia';
 import { useEventStore } from '@/stores/eventStore';
 import CardPost from '@/components/CardPost.vue';
-import { User } from '@/types/User';
 import { formatTimeDifference } from '@/composables/formatTimeDifference';
 
 const eventStore = useEventStore();

@@ -1,67 +1,88 @@
 <template>
-  <div class="wrapper">
-    <div class="card">
-      <div class="header">
-        <img
-          :src="profile?.banner as string"
-          alt=""
-        />
-      </div>
-      <div class="body">
-        <div slot="end">
-          <user-avatar
-            cssAssigned="profile"
-            :profile="profile as User"
-          />
-        </div>
-        <div class="name">
-          {{ profile.name }} {{ profile.display_name }}
+  <section class="profile-card">
+    <div class="profile-banner">
+      <img
+        v-if="profile.banner"
+        :src="profile.banner"
+        alt=""
+      />
+    </div>
+
+    <div class="profile-body">
+      <user-avatar
+        cssAssigned="profile"
+        :profile="profile as User"
+        class="profile-avatar"
+      />
+
+      <div class="profile-heading">
+        <h2>{{ displayName }}</h2>
+        <div class="profile-actions">
           <ion-icon
             v-show="profile?.checked"
             :icon="personCircleOutline"
-            class="icon-verified"
+            class="verified-icon"
+            aria-label="Verified NIP-05"
           ></ion-icon>
-          <ion-icon
+          <ion-button
             v-show="props.publicKeyHex === props.profile.pubkey"
-            :icon="refreshCircleOutline"
-            class="icon-verified"
+            fill="clear"
+            size="small"
+            class="refresh-button"
+            aria-label="Refresh profile"
             @click="updateMyProfile"
-          ></ion-icon>
-        </div>
-        <div class="nip05">{{ profile?.nip05 }}</div>
-        <div class="pubkey">{{ profile.pubkey }}</div>
-        <div class="intro">
-          <p>
-            {{ profile.about }}
-          </p>
-        </div>
-        <div class="info-counts">
-          <div>
-            <div>171 Followers</div>
-          </div>
-          <div>
-            <div>33 Following</div>
-          </div>
+          >
+            <ion-icon
+              slot="icon-only"
+              :icon="refreshCircleOutline"
+            ></ion-icon>
+          </ion-button>
         </div>
       </div>
+
+      <p
+        v-if="profile?.nip05"
+        class="nip05"
+      >
+        {{ profile.nip05 }}
+      </p>
+      <p
+        class="pubkey"
+        :title="profile.pubkey"
+      >
+        {{ shortPubkey }}
+      </p>
+      <p
+        v-if="profile.about"
+        class="about"
+      >
+        {{ profile.about }}
+      </p>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import UserAvatar from '@/components/UserAvatar.vue';
 import EventService from '@/services/EventService';
 import type { User } from '@/types/User';
-import { IonIcon } from '@ionic/vue';
+import { IonButton, IonIcon } from '@ionic/vue';
 import { personCircleOutline, refreshCircleOutline } from 'ionicons/icons';
+import { truncate } from '@/composables/truncate';
 
 const props = defineProps<{
   profile: User;
   publicKeyHex: string;
 }>();
 
+const displayName = computed(
+  () => props.profile.name || props.profile.display_name || 'Anon',
+);
+const shortPubkey = computed(() => truncate(props.profile.pubkey, 34));
+
 const updateMyProfile = () => {
-  const relays: string[] = import.meta.env.VITE_RELAYS.split(',');
+  const relays = EventService.getRelays();
 
   if (props.publicKeyHex === props.profile.pubkey) {
     for (const relay of relays) {
@@ -72,90 +93,86 @@ const updateMyProfile = () => {
 </script>
 
 <style scoped>
-body {
-  font-family: 'Montserrat', sans-serif;
-  background-color: var(--light);
-}
-img {
+.profile-card {
+  overflow: hidden;
   width: 100%;
-  height: auto;
+  margin: 0 auto 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #fbfdff;
 }
-.wrapper {
+
+.profile-banner {
+  height: 130px;
+  background: linear-gradient(135deg, #3880ff, #3dc2ff 55%, #5260ff);
+}
+
+.profile-banner img {
   width: 100%;
-  height: auto;
-}
-.card {
-  width: 400px;
-  height: auto;
-  text-align: center;
-  margin: 0px auto;
-  box-shadow: 0px 0px 15px #ccc;
-}
-.card .header {
-  height: 100px;
+  height: 100%;
+  object-fit: cover;
 }
 
-.card .body {
-  background-color: var(--white);
-  padding: 20px 40px 40px 40px;
+.profile-body {
+  padding: 0 18px 20px;
 }
 
-.card .body .author-img {
-  margin-top: -20px;
-  margin-bottom: 20px;
-}
-.card .body .author-img img {
-  width: 170px;
-  height: 170px;
-  border-radius: 50%;
-  padding: 5px;
-  background-color: var(--white);
+.profile-avatar {
+  margin-top: -54px;
 }
 
-.card .body .name {
-  font-size: 18px;
-  font-weight: 600;
-  /* text-transform: uppercase; */
-}
-.card .body .nip05 {
-  font-size: 11px;
-  font-weight: 200;
-  line-height: 1.6;
-  margin: 10px 0px 0px 0px;
+.profile-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
 }
 
-.card .body .pubkey {
-  font-size: 11px;
-  font-weight: 200;
-  line-height: 1.6;
-  margin: 10px 0px 0px 0px;
+h2 {
+  min-width: 0;
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
-.card .body .intro {
+.profile-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.verified-icon {
+  color: #2563eb;
+  font-size: 20px;
+}
+
+.refresh-button {
+  --color: #3880ff;
+  --padding-end: 4px;
+  --padding-start: 4px;
+}
+
+.nip05,
+.pubkey,
+.about {
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.nip05,
+.pubkey {
+  color: #6b7280;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.about {
+  color: #374151;
   font-size: 14px;
-  font-weight: 400;
-  line-height: 1.6;
-  margin: 10px 0px 50px 0px;
-}
-
-.card .body .info-counts {
-  display: flex;
-  margin-left: 60px;
-  margin-top: 10px;
-}
-
-.card .body .info-counts div {
-  display: flex;
-  margin-right: 20px;
-}
-.card .body .info-counts div svg {
-  color: #657786;
-  margin-right: 10px;
-}
-
-@media (max-width: 480px) {
-  .card {
-    width: 100%;
-  }
 }
 </style>
