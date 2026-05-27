@@ -7,4 +7,5 @@ export interface TextNote {
   content: string;
   sig: string;
   relay: string;
+  relays: string[];
 }

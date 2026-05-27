@@ -1,7 +1,7 @@
 <template>
   <card-post
     v-for="textNoteUser of textNotesUsers"
-    :key="textNoteUser.textNote.id + textNoteUser.textNote.relay"
+    :key="textNoteUser.textNote.id"
     :pubkey="textNoteUser.textNote?.pubkey as string"
     :moment="formatTimeDifference(textNoteUser.textNote.created_at)"
     :content="textNoteUser.textNote.content"
@@ -35,7 +35,7 @@ const settingsStore = useSettingsStore();
 const { privateKeyHex } = storeToRefs(settingsStore);
 const likingPosts = ref<Set<string>>(new Set());
 
-const postKey = (textNote: TextNote): string => `${textNote.id}:${textNote.relay}`;
+const postKey = (textNote: TextNote): string => textNote.id;
 
 const isLikePending = (textNote: TextNote): boolean =>
   likingPosts.value.has(postKey(textNote));

@@ -65,7 +65,7 @@ class EventService {
   private static utilStore = useUtilStore();
   private static settingsStore = useSettingsStore();
   private static loading = storeToRefs(EventService.utilStore).loading;
-  private static textNotes: TextNote[] = [];
+  private static textNotes = new Map<string, TextNote>();
   private static users: User[] = [];
   private static reactions: LikeReaction[] = [];
   private static sortByLikedAt = false;
@@ -81,11 +81,15 @@ class EventService {
   };
 
   private static resetEventData = (): void => {
-    EventService.textNotes = [];
+    EventService.textNotes.clear();
     EventService.users = [];
     EventService.reactions = [];
     EventService.textNotesUsers.value = [];
   };
+
+  private static getTextNotes = (): TextNote[] => [
+    ...EventService.textNotes.values(),
+  ];
 
   private static isValidNip05 = (nip05Address: string): boolean => {
     const [name, domain] = nip05Address.includes('@')
@@ -313,15 +317,22 @@ class EventService {
       return false;
     }
 
-    const exists = EventService.textNotes.some(
-      textNote => textNote.id === event.id && textNote.relay === relay,
-    );
+    const existing = EventService.textNotes.get(event.id);
 
-    if (exists) {
-      return false;
+    if (existing) {
+      if (existing.relays.includes(relay)) {
+        return false;
+      }
+
+      existing.relays.push(relay);
+      return true;
     }
 
-    EventService.textNotes.push({ ...event, relay });
+    EventService.textNotes.set(event.id, {
+      ...event,
+      relay,
+      relays: [relay],
+    });
 
     return true;
   };
@@ -435,26 +446,28 @@ class EventService {
     const { publicKeyHex } = storeToRefs(EventService.settingsStore);
     const likePubkeysByEventId = EventService.getLikePubkeysByEventId();
 
-    EventService.textNotesUsers.value = EventService.textNotes.map(textNote => {
-      const user =
-        EventService.users.find(
-          u => u.pubkey === textNote.pubkey && u.relay === textNote.relay,
-        ) ?? EventService.users.find(u => u.pubkey === textNote.pubkey);
-      const likePubkeys = likePubkeysByEventId.get(textNote.id) ?? new Set();
+    EventService.textNotesUsers.value = EventService.getTextNotes().map(
+      textNote => {
+        const user =
+          EventService.users.find(
+            u => u.pubkey === textNote.pubkey && u.relay === textNote.relay,
+          ) ?? EventService.users.find(u => u.pubkey === textNote.pubkey);
+        const likePubkeys = likePubkeysByEventId.get(textNote.id) ?? new Set();
 
-      if (user) {
-        EventService.verifyNip05(user);
-      }
+        if (user) {
+          EventService.verifyNip05(user);
+        }
 
-      return {
-        textNote,
-        user,
-        likeCount: likePubkeys.size,
-        likedByMe: Boolean(
-          publicKeyHex.value && likePubkeys.has(publicKeyHex.value),
-        ),
-      };
-    });
+        return {
+          textNote,
+          user,
+          likeCount: likePubkeys.size,
+          likedByMe: Boolean(
+            publicKeyHex.value && likePubkeys.has(publicKeyHex.value),
+          ),
+        };
+      },
+    );
 
     EventService.textNotesUsers.value.sort((a, b) => {
       if (EventService.sortByLikedAt) {
@@ -472,17 +485,11 @@ class EventService {
   };
 
   private static addPublishedNote = (
-    signedEvent: TextNote,
+    signedEvent: NostrEvent<1>,
     acceptedRelays: string[],
   ): void => {
     for (const relay of acceptedRelays) {
-      const exists = EventService.textNotes.some(
-        textNote => textNote.id === signedEvent.id && textNote.relay === relay,
-      );
-
-      if (!exists) {
-        EventService.textNotes.push({ ...signedEvent, relay });
-      }
+      EventService.addTextNote(signedEvent, relay);
     }
 
     EventService.syncTextNotesUsers();
@@ -574,7 +581,7 @@ class EventService {
     } else {
       ws.close();
       const authors = [
-        ...new Set(EventService.textNotes.map(textNote => textNote.pubkey)),
+        ...new Set(EventService.getTextNotes().map(textNote => textNote.pubkey)),
       ];
       EventService.syncTextNotesUsers();
       EventService.loading.value = false;
@@ -583,7 +590,7 @@ class EventService {
       }
 
       const noteIds = [
-        ...new Set(EventService.textNotes.map(textNote => textNote.id)),
+        ...new Set(EventService.getTextNotes().map(textNote => textNote.id)),
       ];
       EventService.initializeReactions(relay, noteIds);
     }
@@ -764,7 +771,7 @@ class EventService {
       }
 
       const authors = [
-        ...new Set(EventService.textNotes.map(textNote => textNote.pubkey)),
+        ...new Set(EventService.getTextNotes().map(textNote => textNote.pubkey)),
       ];
 
       if (authors.length) {
@@ -854,7 +861,7 @@ class EventService {
     if (published && signedEvent) {
       EventService.getEvents([]);
       EventService.addPublishedNote(
-        signedEvent as TextNote,
+        signedEvent as NostrEvent<1>,
         relayResults
           .filter(result => result.status === 'accepted')
           .map(result => result.relay),
