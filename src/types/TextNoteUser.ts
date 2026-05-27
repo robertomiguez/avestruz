@@ -3,4 +3,6 @@ import { User } from '@/types/User';
 export interface TextNoteUser {
   textNote: TextNote;
   user?: User;
+  likeCount: number;
+  likedByMe: boolean;
 }
