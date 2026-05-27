@@ -87,14 +87,18 @@
           />
         </button>
         <button
-          class="icon-button"
+          class="icon-button like-button"
+          :class="{ liked: likedByMe }"
           type="button"
-          aria-label="Like"
+          :aria-label="likeLabel"
+          :disabled="!canLike || likedByMe || likePending"
+          @click="emit('like')"
         >
           <ion-icon
             aria-hidden="true"
-            :icon="heartOutline"
+            :icon="likedByMe ? heart : heartOutline"
           />
+          <span class="action-count">{{ likeCount }}</span>
         </button>
         <button
           class="icon-button"
@@ -117,6 +121,7 @@ import { IonIcon, IonChip } from '@ionic/vue';
 import {
   chatbubbleOutline,
   swapHorizontalOutline,
+  heart,
   heartOutline,
   navigateOutline,
   personCircleOutline,
@@ -133,6 +138,14 @@ const props = defineProps<{
   hashtags: string[];
   relay: string;
   profile?: User;
+  likeCount: number;
+  likedByMe: boolean;
+  canLike: boolean;
+  likePending: boolean;
+}>();
+
+const emit = defineEmits<{
+  like: [];
 }>();
 
 const displayName = computed(() =>
@@ -143,6 +156,18 @@ const displayName = computed(() =>
 );
 
 const shortPubkey = computed(() => truncate(props.pubkey, 18));
+
+const likeLabel = computed(() => {
+  if (props.likedByMe) {
+    return `Liked. ${props.likeCount} likes`;
+  }
+
+  if (!props.canLike) {
+    return `Sign in to like. ${props.likeCount} likes`;
+  }
+
+  return `Like. ${props.likeCount} likes`;
+});
 </script>
 
 <style scoped>
@@ -264,6 +289,38 @@ const shortPubkey = computed(() => truncate(props.pubkey, 18));
   background: #eff6ff;
   color: #3880ff;
   outline: none;
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.icon-button:disabled:hover {
+  background: transparent;
+  color: #6b7280;
+}
+
+.like-button {
+  grid-template-columns: auto auto;
+  width: auto;
+  min-width: 48px;
+  column-gap: 4px;
+  padding: 0 10px;
+}
+
+.like-button.liked {
+  color: #eb445a;
+}
+
+.like-button.liked:disabled:hover {
+  color: #eb445a;
+}
+
+.action-count {
+  min-width: 1ch;
+  font-size: 12px;
+  line-height: 1;
 }
 
 @media (max-width: 430px) {

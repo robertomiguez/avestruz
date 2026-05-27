@@ -25,14 +25,25 @@
         <main class="feed-shell">
           <section class="feed-header">
             <p class="eyebrow">Nostr relay feed</p>
-            <h1>{{ selectedProfile ? 'Profile notes' : 'Latest notes' }}</h1>
-            <p class="summary">
-              {{
-                selectedProfile
-                  ? 'Showing notes from the selected public key.'
-                  : 'A lightweight stream from your configured relays.'
-              }}
-            </p>
+            <h1>{{ feedTitle }}</h1>
+            <p class="summary">{{ feedSummary }}</p>
+
+            <ion-segment
+              v-if="!selectedProfile"
+              :value="feedMode"
+              class="feed-mode"
+              @ionChange="setFeedMode"
+            >
+              <ion-segment-button value="latest">
+                <ion-label>Latest</ion-label>
+              </ion-segment-button>
+              <ion-segment-button
+                value="liked"
+                :disabled="!publicKeyHex"
+              >
+                <ion-label>Liked</ion-label>
+              </ion-segment-button>
+            </ion-segment>
           </section>
 
           <card-profile
@@ -40,10 +51,17 @@
             :profile="selectedProfile as User"
             :publicKeyHex="publicKeyHex as string"
           />
-          <publish-note v-else />
+          <publish-note v-else-if="feedMode === 'latest'" />
 
           <div class="feed-list">
             <list-post />
+          </div>
+
+          <div
+            v-if="showEmptyState"
+            class="empty-state"
+          >
+            {{ emptyStateMessage }}
           </div>
 
           <div
@@ -68,19 +86,25 @@ import {
   IonSpinner,
   IonButtons,
   IonButton,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
 } from '@ionic/vue';
 import ButtonLogin from '@/components/ButtonLogin.vue';
 import ListPost from '@/components/ListPost.vue';
 import CardProfile from '@/components/CardProfile.vue';
 
-import { watchEffect } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useUtilStore } from '@/stores/utilStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useEventStore } from '@/stores/eventStore';
 import EventService from '@/services/EventService';
 import PublishNote from '@/components/PublishNote.vue';
 
 import type { User } from '@/types/User';
+
+type FeedMode = 'latest' | 'liked';
 
 const utilStore = useUtilStore();
 const { selectedProfile, loading } = storeToRefs(utilStore);
@@ -88,12 +112,80 @@ const { selectedProfile, loading } = storeToRefs(utilStore);
 const settingsStore = useSettingsStore();
 const { publicKeyHex } = storeToRefs(settingsStore);
 
-watchEffect(() => {
-  EventService.getEvents(
-    selectedProfile.value?.pubkey
-      ? [selectedProfile.value?.pubkey as string]
-      : [],
-  );
+const eventStore = useEventStore();
+const { textNotesUsers } = storeToRefs(eventStore);
+
+const feedMode = ref<FeedMode>('latest');
+
+const feedTitle = computed(() => {
+  if (selectedProfile.value) {
+    return 'Profile notes';
+  }
+
+  return feedMode.value === 'liked' ? 'Liked notes' : 'Latest notes';
+});
+
+const feedSummary = computed(() => {
+  if (selectedProfile.value) {
+    return 'Showing notes from the selected public key.';
+  }
+
+  if (feedMode.value === 'liked') {
+    return 'Notes liked by your public key.';
+  }
+
+  return 'A lightweight stream from your configured relays.';
+});
+
+const showEmptyState = computed(
+  () => !loading.value && textNotesUsers.value.length === 0,
+);
+
+const emptyStateMessage = computed(() => {
+  if (selectedProfile.value) {
+    return 'No notes found for this profile.';
+  }
+
+  if (feedMode.value === 'liked') {
+    return publicKeyHex.value
+      ? 'No liked notes yet.'
+      : 'Sign in to see liked notes.';
+  }
+
+  return 'No notes found.';
+});
+
+const setFeedMode = (event: CustomEvent): void => {
+  const value = event.detail.value;
+
+  if (value === 'liked' && publicKeyHex.value) {
+    feedMode.value = 'liked';
+    return;
+  }
+
+  feedMode.value = 'latest';
+};
+
+watch(publicKeyHex, value => {
+  if (!value && feedMode.value === 'liked') {
+    feedMode.value = 'latest';
+  }
+});
+
+watch([selectedProfile, feedMode, publicKeyHex], () => {
+  if (selectedProfile.value?.pubkey) {
+    EventService.getEvents([selectedProfile.value.pubkey]);
+    return;
+  }
+
+  if (feedMode.value === 'liked') {
+    void EventService.getLikedNotes(publicKeyHex.value ?? '');
+    return;
+  }
+
+  EventService.getEvents([]);
+}, {
+  immediate: true,
 });
 
 const cleanSelectedProfile = () => {
@@ -166,9 +258,26 @@ h1 {
   line-height: 1.5;
 }
 
+.feed-mode {
+  width: min(100%, 280px);
+  margin-top: 14px;
+}
+
 .feed-list {
   display: grid;
   gap: 12px;
+}
+
+.empty-state {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .loading-state {

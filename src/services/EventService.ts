@@ -38,6 +38,11 @@ export interface BlossomBlobDescriptor {
   uploaded: number;
 }
 
+type LikeReaction = NostrEvent<7> & {
+  relay: string;
+  targetId: string;
+};
+
 class EventService {
   static getRelays(): string[] {
     return (import.meta.env.VITE_RELAYS ?? '')
@@ -62,10 +67,25 @@ class EventService {
   private static loading = storeToRefs(EventService.utilStore).loading;
   private static textNotes: TextNote[] = [];
   private static users: User[] = [];
+  private static reactions: LikeReaction[] = [];
+  private static sortByLikedAt = false;
   private static textNotesUsers = storeToRefs(EventService.eventStore)
     .textNotesUsers;
   private static shouldVerifyNip05 = import.meta.env.VITE_VERIFY_NIP05 === 'true';
   private static publishTimeoutMs = 10000;
+
+  private static getSubscriptionLimit = (): number => {
+    const limit = Number(import.meta.env.VITE_SUB_LIMIT);
+
+    return Number.isFinite(limit) && limit > 0 ? limit : 20;
+  };
+
+  private static resetEventData = (): void => {
+    EventService.textNotes = [];
+    EventService.users = [];
+    EventService.reactions = [];
+    EventService.textNotesUsers.value = [];
+  };
 
   private static isValidNip05 = (nip05Address: string): boolean => {
     const [name, domain] = nip05Address.includes('@')
@@ -270,20 +290,183 @@ class EventService {
     return descriptor as BlossomBlobDescriptor;
   };
 
+  private static isSignedEvent = <K extends number>(
+    event: unknown,
+    kind: K,
+  ): event is NostrEvent<K> => {
+    if (!event || typeof event !== 'object' || !validateEvent(event)) {
+      return false;
+    }
+
+    const signedEvent = event as Partial<NostrEvent<K>>;
+
+    return (
+      signedEvent.kind === kind &&
+      typeof signedEvent.id === 'string' &&
+      typeof signedEvent.sig === 'string' &&
+      verifySignature(signedEvent as NostrEvent)
+    );
+  };
+
+  private static addTextNote = (event: unknown, relay: string): boolean => {
+    if (!EventService.isSignedEvent(event, 1)) {
+      return false;
+    }
+
+    const exists = EventService.textNotes.some(
+      textNote => textNote.id === event.id && textNote.relay === relay,
+    );
+
+    if (exists) {
+      return false;
+    }
+
+    EventService.textNotes.push({ ...event, relay });
+
+    return true;
+  };
+
+  private static addMetadata = (event: unknown, relay: string): boolean => {
+    if (!EventService.isSignedEvent(event, 0)) {
+      return false;
+    }
+
+    const metadata = EventService.parseProfileMetadata(event.content);
+
+    if (!metadata) {
+      return false;
+    }
+
+    const user = {
+      ...{ pubkey: event.pubkey, relay },
+      ...metadata,
+    };
+    const existingIndex = EventService.users.findIndex(
+      existing => existing.pubkey === event.pubkey && existing.relay === relay,
+    );
+
+    if (existingIndex === -1) {
+      EventService.users.push(user);
+    } else {
+      EventService.users[existingIndex] = user;
+    }
+
+    return true;
+  };
+
+  private static getReactionTargetId = (
+    event: Pick<NostrEvent, 'tags'>,
+  ): string | undefined => {
+    for (let index = event.tags.length - 1; index >= 0; index -= 1) {
+      const tag = event.tags[index];
+
+      if (tag[0] === 'e' && tag[1]) {
+        return tag[1];
+      }
+    }
+
+    return undefined;
+  };
+
+  private static isLikeReaction = (event: unknown): event is NostrEvent<7> => {
+    if (!EventService.isSignedEvent(event, 7)) {
+      return false;
+    }
+
+    return (
+      event.kind === 7 &&
+      (event.content === '+' || event.content === '') &&
+      Boolean(EventService.getReactionTargetId(event))
+    );
+  };
+
+  private static addLikeReaction = (
+    event: NostrEvent<7>,
+    relay: string,
+  ): void => {
+    if (!EventService.isLikeReaction(event)) {
+      return;
+    }
+
+    const targetId = EventService.getReactionTargetId(event);
+
+    if (!targetId) {
+      return;
+    }
+
+    const exists = EventService.reactions.some(
+      reaction => reaction.id === event.id && reaction.relay === relay,
+    );
+
+    if (!exists) {
+      EventService.reactions.push({ ...event, relay, targetId });
+    }
+  };
+
+  private static getLikePubkeysByEventId = (): Map<string, Set<string>> => {
+    const likes = new Map<string, Set<string>>();
+
+    for (const reaction of EventService.reactions) {
+      const pubkeys = likes.get(reaction.targetId) ?? new Set<string>();
+      pubkeys.add(reaction.pubkey);
+      likes.set(reaction.targetId, pubkeys);
+    }
+
+    return likes;
+  };
+
+  private static getLikedAt = (eventId: string, pubkey?: string): number => {
+    if (!pubkey) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      ...EventService.reactions
+        .filter(
+          reaction =>
+            reaction.targetId === eventId && reaction.pubkey === pubkey,
+        )
+        .map(reaction => reaction.created_at),
+    );
+  };
+
   private static syncTextNotesUsers = (): void => {
+    const { publicKeyHex } = storeToRefs(EventService.settingsStore);
+    const likePubkeysByEventId = EventService.getLikePubkeysByEventId();
+
     EventService.textNotesUsers.value = EventService.textNotes.map(textNote => {
-      const user = EventService.users.find(
-        u => u.pubkey === textNote.pubkey && u.relay === textNote.relay,
-      );
+      const user =
+        EventService.users.find(
+          u => u.pubkey === textNote.pubkey && u.relay === textNote.relay,
+        ) ?? EventService.users.find(u => u.pubkey === textNote.pubkey);
+      const likePubkeys = likePubkeysByEventId.get(textNote.id) ?? new Set();
 
       if (user) {
         EventService.verifyNip05(user);
       }
 
-      return { textNote, user };
+      return {
+        textNote,
+        user,
+        likeCount: likePubkeys.size,
+        likedByMe: Boolean(
+          publicKeyHex.value && likePubkeys.has(publicKeyHex.value),
+        ),
+      };
     });
 
     EventService.textNotesUsers.value.sort((a, b) => {
+      if (EventService.sortByLikedAt) {
+        const likedAtDifference =
+          EventService.getLikedAt(b.textNote.id, publicKeyHex.value) -
+          EventService.getLikedAt(a.textNote.id, publicKeyHex.value);
+
+        if (likedAtDifference) {
+          return likedAtDifference;
+        }
+      }
+
       return b.textNote.created_at - a.textNote.created_at;
     });
   };
@@ -305,6 +488,17 @@ class EventService {
     EventService.syncTextNotesUsers();
   };
 
+  private static addPublishedLike = (
+    signedEvent: NostrEvent<7>,
+    acceptedRelays: string[],
+  ): void => {
+    for (const relay of acceptedRelays) {
+      EventService.addLikeReaction(signedEvent, relay);
+    }
+
+    EventService.syncTextNotesUsers();
+  };
+
   private static wsOpen = (
     ws: WebSocket,
     relay: string,
@@ -314,7 +508,7 @@ class EventService {
     ws.addEventListener('open', () => {
       const req = {
         kinds: [kind], // 0 metadata, 1 text note
-        limit: +import.meta.env.VITE_SUB_LIMIT,
+        limit: EventService.getSubscriptionLimit(),
         ...(authors.length && { authors }),
       };
       ws.send(`["REQ", "my-sub", ${JSON.stringify(req)} ]`);
@@ -374,8 +568,9 @@ class EventService {
     messageData: any,
   ) => {
     if (messageData != null) {
-      EventService.textNotes.push({ ...messageData, ...{ relay } });
-      EventService.syncTextNotesUsers();
+      if (EventService.addTextNote(messageData, relay)) {
+        EventService.syncTextNotesUsers();
+      }
     } else {
       ws.close();
       const authors = [
@@ -386,6 +581,44 @@ class EventService {
       if (authors.length) {
         EventService.initializeWsMetadata(relay, authors);
       }
+
+      const noteIds = [
+        ...new Set(EventService.textNotes.map(textNote => textNote.id)),
+      ];
+      EventService.initializeReactions(relay, noteIds);
+    }
+  };
+
+  private static initializeReactions = async (
+    relay: string,
+    eventIds: string[],
+  ): Promise<void> => {
+    const uniqueEventIds = [...new Set(eventIds)].filter(Boolean);
+
+    if (!uniqueEventIds.length) {
+      return;
+    }
+
+    const pool = new SimplePool();
+
+    try {
+      const reactions = await pool.list<7>([relay], [
+        {
+          kinds: [7],
+          '#e': uniqueEventIds,
+          limit: EventService.getSubscriptionLimit() * uniqueEventIds.length,
+        },
+      ]);
+
+      for (const reaction of reactions) {
+        EventService.addLikeReaction(reaction, relay);
+      }
+
+      EventService.syncTextNotesUsers();
+    } catch {
+      EventService.syncTextNotesUsers();
+    } finally {
+      pool.close([relay]);
     }
   };
 
@@ -410,16 +643,7 @@ class EventService {
     messageData: any,
   ) => {
     if (messageData != null) {
-      const metadata = EventService.parseProfileMetadata(messageData.content);
-
-      if (!metadata) {
-        return;
-      }
-
-      EventService.users.push({
-        ...{ pubkey: messageData.pubkey, relay },
-        ...metadata,
-      });
+      EventService.addMetadata(messageData, relay);
     } else {
       ws.close();
 
@@ -453,14 +677,121 @@ class EventService {
     }
 
     EventService.loading.value = true;
-    EventService.textNotes = [];
-    EventService.users = [];
+    EventService.sortByLikedAt = false;
+    EventService.resetEventData();
 
     for (const relay of relays) {
       EventService.initializeTextNote(relay, pubkey);
     }
 
     return;
+  }
+
+  static clearEvents(): void {
+    EventService.sortByLikedAt = false;
+    EventService.resetEventData();
+    EventService.loading.value = false;
+  }
+
+  static async getLikedNotes(pubkey: string): Promise<void> {
+    const relays = EventService.getRelays();
+
+    if (!relays.length) {
+      console.error('No Relay address registered.');
+      return;
+    }
+
+    if (!pubkey) {
+      EventService.clearEvents();
+      return;
+    }
+
+    EventService.loading.value = true;
+    EventService.sortByLikedAt = true;
+    EventService.resetEventData();
+
+    const pool = new SimplePool();
+
+    try {
+      const reactions = await pool.list<7>(relays, [
+        {
+          kinds: [7],
+          authors: [pubkey],
+          limit: EventService.getSubscriptionLimit(),
+        },
+      ]);
+      const likedEventIds = new Set<string>();
+
+      for (const reaction of reactions) {
+        if (!EventService.isLikeReaction(reaction)) {
+          continue;
+        }
+
+        const targetId = EventService.getReactionTargetId(reaction);
+
+        if (!targetId) {
+          continue;
+        }
+
+        const seenRelays = pool.seenOn(reaction.id);
+
+        for (const relay of seenRelays.length ? seenRelays : relays) {
+          EventService.addLikeReaction(reaction, relay);
+        }
+
+        likedEventIds.add(targetId);
+      }
+
+      if (!likedEventIds.size) {
+        EventService.syncTextNotesUsers();
+        return;
+      }
+
+      const notes = await pool.list<1>(relays, [
+        {
+          kinds: [1],
+          ids: [...likedEventIds],
+          limit: likedEventIds.size,
+        },
+      ]);
+
+      for (const note of notes) {
+        const seenRelays = pool.seenOn(note.id);
+
+        for (const relay of seenRelays.length ? seenRelays : relays) {
+          EventService.addTextNote(note, relay);
+        }
+      }
+
+      const authors = [
+        ...new Set(EventService.textNotes.map(textNote => textNote.pubkey)),
+      ];
+
+      if (authors.length) {
+        const metadataEvents = await pool.list<0>(relays, [
+          {
+            kinds: [0],
+            authors,
+            limit: authors.length,
+          },
+        ]);
+
+        for (const metadata of metadataEvents) {
+          const seenRelays = pool.seenOn(metadata.id);
+
+          for (const relay of seenRelays.length ? seenRelays : relays) {
+            EventService.addMetadata(metadata, relay);
+          }
+        }
+      }
+
+      EventService.syncTextNotesUsers();
+    } catch {
+      EventService.syncTextNotesUsers();
+    } finally {
+      EventService.loading.value = false;
+      pool.close(relays);
+    }
   }
 
   private static fillMyUser = (
@@ -524,6 +855,33 @@ class EventService {
       EventService.getEvents([]);
       EventService.addPublishedNote(
         signedEvent as TextNote,
+        relayResults
+          .filter(result => result.status === 'accepted')
+          .map(result => result.relay),
+      );
+    }
+
+    return relayResults;
+  }
+
+  static async publishLike(textNote: TextNote): Promise<PublishRelayResult[]> {
+    const event: EventTemplate<7> = {
+      kind: 7,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ['e', textNote.id, textNote.relay, textNote.pubkey],
+        ['p', textNote.pubkey, textNote.relay],
+        ['k', `${textNote.kind}`],
+      ],
+      content: '+',
+    };
+    const { relayResults, signedEvent } =
+      await EventService.signAndPublish(event);
+    const published = relayResults.some(result => result.status === 'accepted');
+
+    if (published && signedEvent) {
+      EventService.addPublishedLike(
+        signedEvent as NostrEvent<7>,
         relayResults
           .filter(result => result.status === 'accepted')
           .map(result => result.relay),
