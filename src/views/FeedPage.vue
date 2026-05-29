@@ -43,6 +43,18 @@
               >
                 <ion-label>Liked</ion-label>
               </ion-segment-button>
+              <ion-segment-button
+                value="replies"
+                :disabled="!publicKeyHex"
+              >
+                <ion-label>My replies</ion-label>
+              </ion-segment-button>
+              <ion-segment-button
+                value="repliesToMe"
+                :disabled="!publicKeyHex"
+              >
+                <ion-label>To me</ion-label>
+              </ion-segment-button>
             </ion-segment>
           </section>
 
@@ -104,7 +116,7 @@ import PublishNote from '@/components/PublishNote.vue';
 
 import type { User } from '@/types/User';
 
-type FeedMode = 'latest' | 'liked';
+type FeedMode = 'latest' | 'liked' | 'replies' | 'repliesToMe';
 
 const utilStore = useUtilStore();
 const { selectedProfile, loading } = storeToRefs(utilStore);
@@ -116,13 +128,29 @@ const eventStore = useEventStore();
 const { textNotesUsers } = storeToRefs(eventStore);
 
 const feedMode = ref<FeedMode>('latest');
+const signedInFeedModes: FeedMode[] = ['liked', 'replies', 'repliesToMe'];
+
+const isFeedMode = (value: unknown): value is FeedMode =>
+  value === 'latest' || signedInFeedModes.includes(value as FeedMode);
 
 const feedTitle = computed(() => {
   if (selectedProfile.value) {
     return 'Profile notes';
   }
 
-  return feedMode.value === 'liked' ? 'Liked notes' : 'Latest notes';
+  if (feedMode.value === 'liked') {
+    return 'Liked notes';
+  }
+
+  if (feedMode.value === 'replies') {
+    return 'My replies';
+  }
+
+  if (feedMode.value === 'repliesToMe') {
+    return 'Replies to me';
+  }
+
+  return 'Latest notes';
 });
 
 const feedSummary = computed(() => {
@@ -132,6 +160,14 @@ const feedSummary = computed(() => {
 
   if (feedMode.value === 'liked') {
     return 'Notes liked by your public key.';
+  }
+
+  if (feedMode.value === 'replies') {
+    return 'Comments you published in reply to other notes.';
+  }
+
+  if (feedMode.value === 'repliesToMe') {
+    return 'Comments from other people that reference your public key.';
   }
 
   return 'A lightweight stream from your configured relays.';
@@ -152,22 +188,37 @@ const emptyStateMessage = computed(() => {
       : 'Sign in to see liked notes.';
   }
 
+  if (feedMode.value === 'replies') {
+    return publicKeyHex.value
+      ? 'No replies found yet.'
+      : 'Sign in to see your replies.';
+  }
+
+  if (feedMode.value === 'repliesToMe') {
+    return publicKeyHex.value
+      ? 'No replies to you found yet.'
+      : 'Sign in to see replies to you.';
+  }
+
   return 'No notes found.';
 });
 
 const setFeedMode = (event: CustomEvent): void => {
   const value = event.detail.value;
 
-  if (value === 'liked' && publicKeyHex.value) {
-    feedMode.value = 'liked';
+  if (!isFeedMode(value)) {
     return;
   }
 
-  feedMode.value = 'latest';
+  if (value !== 'latest' && !publicKeyHex.value) {
+    return;
+  }
+
+  feedMode.value = value;
 };
 
 watch(publicKeyHex, value => {
-  if (!value && feedMode.value === 'liked') {
+  if (!value && feedMode.value !== 'latest') {
     feedMode.value = 'latest';
   }
 });
@@ -180,6 +231,16 @@ watch([selectedProfile, feedMode, publicKeyHex], () => {
 
   if (feedMode.value === 'liked') {
     void EventService.getLikedNotes(publicKeyHex.value ?? '');
+    return;
+  }
+
+  if (feedMode.value === 'replies') {
+    void EventService.getMyReplies(publicKeyHex.value ?? '');
+    return;
+  }
+
+  if (feedMode.value === 'repliesToMe') {
+    void EventService.getRepliesToMe(publicKeyHex.value ?? '');
     return;
   }
 
@@ -259,7 +320,7 @@ h1 {
 }
 
 .feed-mode {
-  width: min(100%, 280px);
+  width: min(100%, 460px);
   margin-top: 14px;
 }
 
