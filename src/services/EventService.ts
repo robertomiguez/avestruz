@@ -62,37 +62,37 @@ class EventService {
     return server.replace(/\/+$/, '');
   }
 
-  private static eventStore = useEventStore();
-  private static utilStore = useUtilStore();
-  private static settingsStore = useSettingsStore();
-  private static loading = storeToRefs(EventService.utilStore).loading;
-  private static textNotes = new Map<string, TextNote>();
+  private static readonly eventStore = useEventStore();
+  private static readonly utilStore = useUtilStore();
+  private static readonly settingsStore = useSettingsStore();
+  private static readonly loading = storeToRefs(EventService.utilStore).loading;
+  private static readonly textNotes = new Map<string, TextNote>();
   private static users: User[] = [];
   private static reactions: LikeReaction[] = [];
   private static sortByLikedAt = false;
-  private static textNotesUsers = storeToRefs(EventService.eventStore)
+  private static readonly textNotesUsers = storeToRefs(EventService.eventStore)
     .textNotesUsers;
-  private static shouldVerifyNip05 = import.meta.env.VITE_VERIFY_NIP05 === 'true';
-  private static publishTimeoutMs = 10000;
+  private static readonly shouldVerifyNip05 = import.meta.env.VITE_VERIFY_NIP05 === 'true';
+  private static readonly publishTimeoutMs = 10000;
 
-  private static getSubscriptionLimit = (): number => {
+  private static readonly getSubscriptionLimit = (): number => {
     const limit = Number(import.meta.env.VITE_SUB_LIMIT);
 
     return Number.isFinite(limit) && limit > 0 ? limit : 20;
   };
 
-  private static resetEventData = (): void => {
+  private static readonly resetEventData = (): void => {
     EventService.textNotes.clear();
     EventService.users = [];
     EventService.reactions = [];
     EventService.textNotesUsers.value = [];
   };
 
-  private static getTextNotes = (): TextNote[] => [
+  private static readonly getTextNotes = (): TextNote[] => [
     ...EventService.textNotes.values(),
   ];
 
-  private static isValidNip05 = (nip05Address: string): boolean => {
+  private static readonly isValidNip05 = (nip05Address: string): boolean => {
     const [name, domain] = nip05Address.includes('@')
       ? nip05Address.split('@')
       : ['_', nip05Address];
@@ -106,7 +106,7 @@ class EventService {
     );
   };
 
-  private static verifyNip05 = async (user: User): Promise<void> => {
+  private static readonly verifyNip05 = async (user: User): Promise<void> => {
     if (
       !EventService.shouldVerifyNip05 ||
       !user.nip05 ||
@@ -123,45 +123,45 @@ class EventService {
     }
   };
 
-  private static withPublishTimeout = (
+  private static readonly withPublishTimeout = (
     relay: string,
     publish: Promise<void>,
   ): Promise<void> =>
     Promise.race([
       publish,
       new Promise<void>((_, reject) => {
-        window.setTimeout(
+        globalThis.setTimeout(
           () => reject(new Error(`Timed out publishing to ${relay}.`)),
           EventService.publishTimeoutMs,
         );
       }),
     ]);
 
-  private static base64UrlEncode = (value: string): string => {
+  private static readonly base64UrlEncode = (value: string): string => {
     const bytes = new TextEncoder().encode(value);
     let binary = '';
 
     for (const byte of bytes) {
-      binary += String.fromCharCode(byte);
+      binary += String.fromCodePoint(byte);
     }
 
-    return window
+    return globalThis
       .btoa(binary)
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/g, '');
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      .replaceAll(/=+$/g, '');
   };
 
-  private static sha256Hex = async (file: File): Promise<string> => {
+  private static readonly sha256Hex = async (file: File): Promise<string> => {
     const buffer = await file.arrayBuffer();
-    const hash = await window.crypto.subtle.digest('SHA-256', buffer);
+    const hash = await globalThis.crypto.subtle.digest('SHA-256', buffer);
 
     return Array.from(new Uint8Array(hash))
       .map(byte => byte.toString(16).padStart(2, '0'))
       .join('');
   };
 
-  private static parseProfileMetadata = (
+  private static readonly parseProfileMetadata = (
     content: unknown,
   ): ProfileMetadata | undefined => {
     if (typeof content !== 'string') {
@@ -181,7 +181,7 @@ class EventService {
     }
   };
 
-  private static signAndPublish = async (
+  private static readonly signAndPublish = async (
     event: EventTemplate,
   ): Promise<{
     relayResults: PublishRelayResult[];
@@ -237,7 +237,7 @@ class EventService {
     return { relayResults, signedEvent };
   };
 
-  private static createBlossomAuthorization = (
+  private static readonly createBlossomAuthorization = (
     action: 'upload',
     blobHash: string,
     server: string,
@@ -273,7 +273,7 @@ class EventService {
     return EventService.base64UrlEncode(JSON.stringify(signedEvent));
   };
 
-  private static parseBlobDescriptor = (
+  private static readonly parseBlobDescriptor = (
     value: unknown,
   ): BlossomBlobDescriptor | undefined => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -295,7 +295,7 @@ class EventService {
     return descriptor as BlossomBlobDescriptor;
   };
 
-  private static isSignedEvent = <K extends number>(
+  private static readonly isSignedEvent = <K extends number>(
     event: unknown,
     kind: K,
   ): event is NostrEvent<K> => {
@@ -313,7 +313,7 @@ class EventService {
     );
   };
 
-  private static addTextNote = (event: unknown, relay: string): boolean => {
+  private static readonly addTextNote = (event: unknown, relay: string): boolean => {
     if (!EventService.isSignedEvent(event, 1)) {
       return false;
     }
@@ -338,7 +338,7 @@ class EventService {
     return true;
   };
 
-  private static addMetadata = (event: unknown, relay: string): boolean => {
+  private static readonly addMetadata = (event: unknown, relay: string): boolean => {
     if (!EventService.isSignedEvent(event, 0)) {
       return false;
     }
@@ -350,7 +350,7 @@ class EventService {
     }
 
     const user = {
-      ...{ pubkey: event.pubkey, relay },
+       pubkey: event.pubkey, relay ,
       ...metadata,
     };
     const existingIndex = EventService.users.findIndex(
@@ -366,7 +366,7 @@ class EventService {
     return true;
   };
 
-  private static getReactionTargetId = (
+  private static readonly getReactionTargetId = (
     event: Pick<NostrEvent, 'tags'>,
   ): string | undefined => {
     for (let index = event.tags.length - 1; index >= 0; index -= 1) {
@@ -380,17 +380,17 @@ class EventService {
     return undefined;
   };
 
-  private static hasEventReference = (
+  private static readonly hasEventReference = (
     event: Pick<NostrEvent, 'tags'>,
   ): boolean => event.tags.some(tag => tag[0] === 'e' && Boolean(tag[1]));
 
-  private static getMarkedEventTag = (
+  private static readonly getMarkedEventTag = (
     textNote: TextNote,
     marker: string,
   ): string[] | undefined =>
     textNote.tags.find(tag => tag[0] === 'e' && tag[1] && tag[3] === marker);
 
-  private static createReplyTags = (textNote: TextNote): string[][] => {
+  private static readonly createReplyTags = (textNote: TextNote): string[][] => {
     const rootTag = EventService.getMarkedEventTag(textNote, 'root');
     const rootId = rootTag?.[1] ?? textNote.id;
     const rootRelay = rootTag?.[2] || textNote.relay;
@@ -402,7 +402,7 @@ class EventService {
     ];
   };
 
-  private static isLikeReaction = (event: unknown): event is NostrEvent<7> => {
+  private static readonly isLikeReaction = (event: unknown): event is NostrEvent<7> => {
     if (!EventService.isSignedEvent(event, 7)) {
       return false;
     }
@@ -414,7 +414,7 @@ class EventService {
     );
   };
 
-  private static addLikeReaction = (
+  private static readonly addLikeReaction = (
     event: NostrEvent<7>,
     relay: string,
   ): void => {
@@ -437,7 +437,7 @@ class EventService {
     }
   };
 
-  private static getLikePubkeysByEventId = (): Map<string, Set<string>> => {
+  private static readonly getLikePubkeysByEventId = (): Map<string, Set<string>> => {
     const likes = new Map<string, Set<string>>();
 
     for (const reaction of EventService.reactions) {
@@ -449,7 +449,7 @@ class EventService {
     return likes;
   };
 
-  private static addPoolTextNote = (
+  private static readonly addPoolTextNote = (
     pool: SimplePool,
     relays: string[],
     note: NostrEvent<1>,
@@ -461,7 +461,7 @@ class EventService {
     }
   };
 
-  private static addMetadataForCurrentTextNotes = async (
+  private static readonly addMetadataForCurrentTextNotes = async (
     pool: SimplePool,
     relays: string[],
   ): Promise<void> => {
@@ -490,7 +490,7 @@ class EventService {
     }
   };
 
-  private static addReactionsForCurrentTextNotes = async (
+  private static readonly addReactionsForCurrentTextNotes = async (
     pool: SimplePool,
     relays: string[],
   ): Promise<void> => {
@@ -519,7 +519,7 @@ class EventService {
     }
   };
 
-  private static getReplyNotes = async (
+  private static readonly getReplyNotes = async (
     filters: Filter<1>[],
     shouldInclude: (note: NostrEvent<1>) => boolean,
   ): Promise<void> => {
@@ -558,7 +558,7 @@ class EventService {
     }
   };
 
-  private static getLikedAt = (eventId: string, pubkey?: string): number => {
+  private static readonly getLikedAt = (eventId: string, pubkey?: string): number => {
     if (!pubkey) {
       return 0;
     }
@@ -574,7 +574,7 @@ class EventService {
     );
   };
 
-  private static syncTextNotesUsers = (): void => {
+  private static readonly syncTextNotesUsers = (): void => {
     const { publicKeyHex } = storeToRefs(EventService.settingsStore);
     const likePubkeysByEventId = EventService.getLikePubkeysByEventId();
 
@@ -616,7 +616,7 @@ class EventService {
     });
   };
 
-  private static addPublishedNote = (
+  private static readonly addPublishedNote = (
     signedEvent: NostrEvent<1>,
     acceptedRelays: string[],
   ): void => {
@@ -627,7 +627,7 @@ class EventService {
     EventService.syncTextNotesUsers();
   };
 
-  private static addPublishedLike = (
+  private static readonly addPublishedLike = (
     signedEvent: NostrEvent<7>,
     acceptedRelays: string[],
   ): void => {
@@ -638,7 +638,7 @@ class EventService {
     EventService.syncTextNotesUsers();
   };
 
-  private static wsOpen = (
+  private static readonly wsOpen = (
     ws: WebSocket,
     relay: string,
     authors: string[],
@@ -654,7 +654,7 @@ class EventService {
     });
   };
 
-  private static wsError = (ws: WebSocket) => {
+  private static readonly wsError = (ws: WebSocket) => {
     ws.addEventListener('error', () => {
       EventService.loading.value = false;
 
@@ -667,7 +667,7 @@ class EventService {
     });
   };
 
-  private static wsMessage = (
+  private static readonly wsMessage = (
     ws: WebSocket,
     relay: string,
     fn: (ws: WebSocket, relay: string, messageData: any) => void,
@@ -701,16 +701,12 @@ class EventService {
   //   });
   // }
 
-  private static fillTextNote = (
+  private static readonly fillTextNote = (
     ws: WebSocket,
     relay: string,
     messageData: any,
   ) => {
-    if (messageData != null) {
-      if (EventService.addTextNote(messageData, relay)) {
-        EventService.syncTextNotesUsers();
-      }
-    } else {
+    if (messageData == null) {
       ws.close();
       const authors = [
         ...new Set(EventService.getTextNotes().map(textNote => textNote.pubkey)),
@@ -725,10 +721,12 @@ class EventService {
         ...new Set(EventService.getTextNotes().map(textNote => textNote.id)),
       ];
       EventService.initializeReactions(relay, noteIds);
-    }
+    } else if (EventService.addTextNote(messageData, relay)) {
+        EventService.syncTextNotesUsers();
+      }
   };
 
-  private static initializeReactions = async (
+  private static readonly initializeReactions = async (
     relay: string,
     eventIds: string[],
   ): Promise<void> => {
@@ -761,7 +759,7 @@ class EventService {
     }
   };
 
-  private static initializeTextNote = (relay: string, authors: string[]) => {
+  private static readonly initializeTextNote = (relay: string, authors: string[]) => {
     let wsTextNotes: WebSocket;
 
     try {
@@ -776,22 +774,22 @@ class EventService {
     EventService.wsMessage(wsTextNotes, relay, EventService.fillTextNote);
   };
 
-  private static fillMetadata = async (
+  private static readonly fillMetadata = async (
     ws: WebSocket,
     relay: string,
     messageData: any,
   ) => {
-    if (messageData != null) {
-      EventService.addMetadata(messageData, relay);
-    } else {
+    if (messageData == null) {
       ws.close();
 
       EventService.syncTextNotesUsers();
       EventService.loading.value = false;
+    } else {
+      EventService.addMetadata(messageData, relay);
     }
   };
 
-  static initializeWsMetadata = (relay: string, authors: string[]) => {
+  static readonly initializeWsMetadata = (relay: string, authors: string[]) => {
     let wsMetadata: WebSocket;
 
     try {
@@ -804,7 +802,6 @@ class EventService {
     EventService.wsError(wsMetadata);
     EventService.wsOpen(wsMetadata, relay, authors, 0);
     EventService.wsMessage(wsMetadata, relay, EventService.fillMetadata);
-    // EventService.wsClose(wsMetadata);
   };
 
   static getEvents(pubkey: string[]): void {
@@ -823,7 +820,6 @@ class EventService {
       EventService.initializeTextNote(relay, pubkey);
     }
 
-    return;
   }
 
   static clearEvents(): void {
@@ -944,7 +940,7 @@ class EventService {
     );
   }
 
-  private static fillMyUser = (
+  private static readonly fillMyUser = (
     ws: WebSocket,
     relay: string,
     messageData: any,
@@ -968,7 +964,7 @@ class EventService {
     }
   };
 
-  static initializeWsMyUser = (relay: string, authors: string[]) => {
+  static readonly initializeWsMyUser = (relay: string, authors: string[]) => {
     let wsMetadata: WebSocket;
 
     try {
@@ -1135,14 +1131,6 @@ class EventService {
     return descriptor;
   }
 
-  // static getMyUser(pubkey: string[]): void {
-  //   //TODO static
-  //   for (const relay of relays) {
-  //     // EventService.initializeWsMyUser(relay, pubkey);
-  //     EventService.initializeTextNote(relay, pubkey);
-  //   }
-  //   return;
-  // }
 }
 
 export default EventService;
