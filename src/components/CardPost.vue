@@ -69,7 +69,9 @@
         <button
           class="icon-button"
           type="button"
-          aria-label="Reply"
+          :aria-label="replyLabel"
+          :disabled="!canReply || replyPending"
+          @click="emit('reply')"
         >
           <ion-icon
             aria-hidden="true"
@@ -142,10 +144,13 @@ const props = defineProps<{
   likedByMe: boolean;
   canLike: boolean;
   likePending: boolean;
+  canReply: boolean;
+  replyPending: boolean;
 }>();
 
 const emit = defineEmits<{
   like: [];
+  reply: [];
 }>();
 
 const displayName = computed(() =>
@@ -167,6 +172,18 @@ const likeLabel = computed(() => {
   }
 
   return `Like. ${props.likeCount} likes`;
+});
+
+const replyLabel = computed(() => {
+  if (!props.canReply) {
+    return 'Sign in to reply';
+  }
+
+  if (props.replyPending) {
+    return 'Publishing reply';
+  }
+
+  return 'Reply';
 });
 </script>
 
